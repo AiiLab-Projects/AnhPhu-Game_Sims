@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Island 30 Days 3D - 30 Ngày Sinh Tồn Hoang Đảo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Local Three.js Engine & 3D Builder Helpers -->
+  <script src="three.min.js"></script>
+  <script src="builder3d.js"></script>
+</head>
+<body class="time-day weather-sunny">
+  <!-- 3D Canvas Container -->
+  <div id="canvas3d-container"></div>
+
+  <!-- In-Game 3D Interaction Prompt Tooltip -->
+  <div id="interactionPrompt" class="interaction-prompt hidden">
+    <div class="prompt-key">E</div>
+    <div class="prompt-info">
+      <div class="prompt-title" id="promptTitle">Chặt Cây</div>
+      <div class="prompt-desc" id="promptDesc">Nhấn [E] hoặc Chạm để đốn củi</div>
+    </div>
+  </div>
+
+  <!-- HUD Overlay Layer -->
+  <div id="hudOverlay" class="hud-layer">
+    <!-- Top Header Bar -->
+    <header class="hud-top glass-bar">
+      <div class="brand-group">
+        <span class="island-logo">🏝️</span>
+        <div>
+          <h1 class="brand-title">ISLAND 30 DAYS 3D</h1>
+          <p class="brand-sub">Sinh Tồn Hoang Đảo Thế Giới Mở</p>
+        </div>
+      </div>
+
+      <div class="day-tracker">
+        <div class="day-number-box">
+          <span class="day-lbl">NGÀY</span>
+          <span class="day-val" id="currentDay">1</span>
+          <span class="day-max">/ 30</span>
+        </div>
+        <div class="env-info-pill">
+          <span id="timeIcon">☀️</span> <span id="timeName">Sáng</span>
+          <span class="sep">•</span>
+          <span id="weatherIcon">☀️</span> <span id="weatherName">Nắng Đẹp</span>
+        </div>
+      </div>
+
+      <div class="header-btns">
+        <button id="soundToggleBtn" class="hud-icon-btn" title="Âm thanh">🔊</button>
+        <button id="cameraToggleBtn" class="hud-icon-btn" title="Góc Nhìn Camera (Gần/Xa)">🎥</button>
+        <button id="guideBtn" class="hud-icon-btn" title="Hướng Dẫn">📖</button>
+        <button id="restartBtn" class="hud-icon-btn" title="Chơi Lại">🔄</button>
+      </div>
+    </header>
+
+    <!-- Left Vitals & Survivor Status Panel -->
+    <aside class="hud-left glass-card">
+      <div class="survivor-profile">
+        <div class="avatar-circle">
+          <span id="avatarMood">🤠</span>
+        </div>
+        <div class="profile-text">
+          <h3 id="survivorTitle">Kẻ Sống Sót</h3>
+          <span id="survivorCondition" class="status-pill status-good">Khỏe mạnh</span>
+        </div>
+      </div>
+
+      <div class="vitals-list">
+        <!-- HP -->
+        <div class="vital-row">
+          <div class="vital-meta">
+            <span>🩸 Máu (HP)</span>
+            <b id="hpVal">100/100</b>
+          </div>
+          <div class="bar-bg"><div class="bar-fill hp" id="hpBar" style="width: 100%;"></div></div>
+        </div>
+        <!-- Hunger -->
+        <div class="vital-row">
+          <div class="vital-meta">
+            <span>🍖 Đói Bụng</span>
+            <b id="hungerVal">85/100</b>
+          </div>
+          <div class="bar-bg"><div class="bar-fill hunger" id="hungerBar" style="width: 85%;"></div></div>
+        </div>
+        <!-- Thirst -->
+        <div class="vital-row">
+          <div class="vital-meta">
+            <span>💧 Cơn Khát</span>
+            <b id="thirstVal">80/100</b>
+          </div>
+          <div class="bar-bg"><div class="bar-fill thirst" id="thirstBar" style="width: 80%;"></div></div>
+        </div>
+        <!-- Sanity -->
+        <div class="vital-row">
+          <div class="vital-meta">
+            <span>🧠 Tinh Thần</span>
+            <b id="sanityVal">90/100</b>
+          </div>
+          <div class="bar-bg"><div class="bar-fill sanity" id="sanityBar" style="width: 90%;"></div></div>
+        </div>
+        <!-- Stamina -->
+        <div class="vital-row">
+          <div class="vital-meta">
+            <span>⚡ Thể Lực Hôm Nay</span>
+            <b id="staminaVal">3/3</b>
+          </div>
+          <div class="stamina-dots" id="staminaPips">
+            <span class="stamina-dot active"></span>
+            <span class="stamina-dot active"></span>
+            <span class="stamina-dot active"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Resources Grid -->
+      <div class="inventory-box">
+        <div class="inv-title">🎒 TÚI ĐỒ & TÀI NGUYÊN</div>
+        <div class="inv-grid">
+          <div class="inv-item" title="Gỗ"><span class="inv-ico">🪵</span><span class="inv-name">Gỗ</span><b id="resWood">3</b></div>
+          <div class="inv-item" title="Đá"><span class="inv-ico">🪨</span><span class="inv-name">Đá</span><b id="resStone">2</b></div>
+          <div class="inv-item" title="Cá sống"><span class="inv-ico">🐟</span><span class="inv-name">Cá tươi</span><b id="resRawFood">1</b></div>
+          <div class="inv-item" title="Thức ăn chín"><span class="inv-ico">🍲</span><span class="inv-name">Món nướng</span><b id="resCookedFood">1</b></div>
+          <div class="inv-item" title="Nước ngọt"><span class="inv-ico">🍶</span><span class="inv-name">Nước</span><b id="resWater">2</b></div>
+          <div class="inv-item" title="Thảo dược"><span class="inv-ico">🌿</span><span class="inv-name">Thuốc</span><b id="resHerb">1</b></div>
+          <div class="inv-item" title="Dây bạt"><span class="inv-ico">🧶</span><span class="inv-name">Dây bạt</span><b id="resRope">1</b></div>
+          <div class="inv-item" title="Kim loại"><span class="inv-ico">⚙️</span><span class="inv-name">Kim loại</span><b id="resMetal">0</b></div>
+        </div>
+
+        <div class="quick-eat-row">
+          <button id="eatBtn" class="btn-quick" title="Ăn món nướng">🍲 Ăn (+30 Đói)</button>
+          <button id="drinkBtn" class="btn-quick" title="Uống nước ngọt">🍶 Uống (+35 Khát)</button>
+          <button id="healBtn" class="btn-quick" title="Dùng thảo dược">🌿 Trị thương (+25 HP)</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Bottom Controls & Action Bar -->
+    <footer class="hud-bottom">
+      <div class="control-hints glass-card">
+        <span class="hint-tag">🕹️ <b>WASD / Phím Mũi Tên</b> : Di chuyển nhân vật 3D</span>
+        <span class="hint-tag">⚡ <b>Phím [E] / [Space]</b> : Tương tác hành động</span>
+        <span class="hint-tag">🖱️ <b>Kéo Chuột</b> : Xoay góc nhìn camera</span>
+      </div>
+
+      <!-- Quick Action Buttons Dock -->
+      <div class="action-dock glass-card">
+        <button id="btnDockChop" class="dock-btn bg-emerald" title="Chặt cây gần nhất">
+          <span class="dock-ico">🌲</span>
+          <span class="dock-lbl">Chặt Cây [1]</span>
+        </button>
+        <button id="btnDockFish" class="dock-btn bg-sky" title="Câu cá bờ biển">
+          <span class="dock-ico">🎣</span>
+          <span class="dock-lbl">Câu Cá [2]</span>
+        </button>
+        <button id="btnDockBuild" class="dock-btn bg-amber" title="Xây nhà & Nâng cấp lều">
+          <span class="dock-ico">🏠</span>
+          <span class="dock-lbl">Xây Nhà [3]</span>
+        </button>
+        <button id="btnDockCraft" class="dock-btn bg-violet" title="Mở bảng chế tạo trang bị">
+          <span class="dock-ico">🔨</span>
+          <span class="dock-lbl">Chế Tạo [4]</span>
+        </button>
+        <button id="btnDockRest" class="dock-btn bg-rose" title="Nghỉ ngơi qua ngày mới">
+          <span class="dock-ico">😴</span>
+          <span class="dock-lbl">Nghỉ Ngơi [5]</span>
+        </button>
+      </div>
+    </footer>
+
+    <!-- Right Side: Mini Island Map & Live Diary Log -->
+    <aside class="hud-right glass-card">
+      <div class="diary-header">
+        <h4>📜 Nhật Ký Hoang Đảo</h4>
+        <span class="badge" id="shelterBadge">⛺ Lv0: Chưa có lều</span>
+      </div>
+      <div class="diary-scroll" id="diaryScroll">
+        <!-- Live logs populated dynamically -->
+      </div>
+    </aside>
+
+    <!-- Virtual Joystick for Touch / Mobile Devices -->
+    <div id="virtualJoystick" class="virtual-joystick-container">
+      <div class="joystick-base">
+        <div class="joystick-stick" id="joystickStick"></div>
+      </div>
+      <button id="btnMobileAction" class="mobile-action-btn">⚡ TƯƠNG TÁC [E]</button>
+    </div>
+  </div>
+
+  <!-- Crafting & Upgrades Modal -->
+  <div class="modal-backdrop hidden" id="craftModal">
+    <div class="modal-card glass-modal animate-pop">
+      <div class="modal-header">
+        <span class="modal-icon">🔨</span>
+        <h3 class="modal-title">Bàn Chế Tạo & Nấu Nướng</h3>
+        <button class="close-btn" id="closeCraftBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <h5>🍳 Nấu Nướng</h5>
+        <div class="craft-grid">
+          <div class="craft-box">
+            <div class="craft-info">
+              <b>🍲 Nướng Thịt/Cá Tươi</b>
+              <p>Tốn: 1 Cá/Thịt sống 🐟 + 1 Gỗ 🪵</p>
+            </div>
+            <button class="btn-craft" id="btnCraftCook">Nướng (1)</button>
+          </div>
+          <div class="craft-box">
+            <div class="craft-info">
+              <b>🍶 Đun Nước Ngọt Tinh Khiết</b>
+              <p>Tốn: 1 Gỗ 🪵 đun sôi diệt khuẩn</p>
+            </div>
+            <button class="btn-craft" id="btnCraftWater">Đun (+2 Nước)</button>
+          </div>
+        </div>
+
+        <h5>🛠️ Dụng Cụ & Trang Bị 3D</h5>
+        <div class="craft-grid">
+          <div class="craft-box">
+            <div class="craft-info">
+              <b>🪓 Rìu Đá Sắc Bén</b>
+              <p>Nhân đôi sản lượng gỗ đốn được (4 Gỗ + 3 Đá)</p>
+            </div>
+            <button class="btn-craft" id="btnCraftAxe">Chế Tạo</button>
+          </div>
+          <div class="craft-box">
+            <div class="craft-info">
+              <b>🎣 Cần Câu Xịn</b>
+              <p>Tăng cơ hội bắt cá ngừ to & đồ dạt bờ (3 Gỗ + 2 Dây)</p>
+            </div>
+            <button class="btn-craft" id="btnCraftRod">Chế Tạo</button>
+          </div>
+          <div class="craft-box">
+            <div class="craft-info">
+              <b>🏹 Cung Tên Săn Bắn</b>
+              <p>Tự vệ và săn thú hoang (5 Gỗ + 3 Dây + 2 Đá)</p>
+            </div>
+            <button class="btn-craft" id="btnCraftBow">Chế Tạo</button>
+          </div>
+          <div class="craft-box">
+            <div class="craft-info">
+              <b>🗼 Ngọn Hải Đăng SOS Trên Đỉnh Núi</b>
+              <p>Phát tín hiệu trực thăng cứu hộ (15 Gỗ + 10 Đá + 5 Dây + 3 Kim loại)</p>
+            </div>
+            <button class="btn-craft" id="btnCraftSOS">Xây Dựng</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Choice Modal -->
+  <div class="modal-backdrop hidden" id="eventModal">
+    <div class="modal-card glass-modal animate-pop">
+      <div class="modal-header">
+        <span class="modal-icon" id="eventModalIcon">⚠️</span>
+        <h3 class="modal-title" id="eventModalTitle">Sự Kiện Đột Xuất!</h3>
+      </div>
+      <div class="modal-body">
+        <p id="eventModalText">Một điều gì đó bất ngờ đã xảy ra...</p>
+        <div class="event-image-box" id="eventIllustration">🏝️</div>
+        <div class="modal-choices-list" id="eventChoicesContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ending / Game Over Modal -->
+  <div class="modal-backdrop hidden" id="endingModal">
+    <div class="modal-card glass-modal animate-pop ending-modal">
+      <div class="ending-emoji" id="endingEmoji">🏆</div>
+      <h2 id="endingTitle">CHIẾN THẮNG HOÀN TOÀN!</h2>
+      <p id="endingSubtitle">Bạn đã sống sót qua 30 ngày đầy kỳ tích!</p>
+      
+      <div class="ending-stats-grid" id="endingStatsGrid"></div>
+      <div class="ending-story" id="endingStoryText"></div>
+
+      <div class="modal-footer">
+        <button class="btn-primary" id="btnRestartGame">🔄 Thử Lại Hành Trình Mới</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Guide Modal -->
+  <div class="modal-backdrop hidden" id="guideModal">
+    <div class="modal-card glass-modal">
+      <div class="modal-header">
+        <span class="modal-icon">📖</span>
+        <h3 class="modal-title">Cẩm Nang Sinh Tồn 3D Hoang Đảo</h3>
+        <button class="close-btn" id="closeGuideBtn">✕</button>
+      </div>
+      <div class="modal-body guide-body">
+        <h4>🕹️ Cách Điều Khiển Người Chơi 3D</h4>
+        <ul>
+          <li><b>WASD / Phím mũi tên:</b> Điều khiển nhân vật di chuyển quanh hòn đảo 3D.</li>
+          <li><b>Phím [E] hoặc [Space]:</b> Tương tác trực tiếp khi đi lại gần cây cối, bờ biển, lửa trại, hang động hoặc xác tàu đắm.</li>
+          <li><b>Phím số [1-5]:</b> Phím tắt nhanh các hành động Chặt cây, Câu cá, Xây nhà, Chế tạo, Đi ngủ.</li>
+          <li><b>Kéo chuột:</b> Xoay camera 3D xung quanh nhân vật để quan sát toàn cảnh đảo hoang.</li>
+        </ul>
+        
+        <h4>🎯 Mục Tiêu Sống Sót 30 Ngày</h4>
+        <p>Giữ các chỉ số 🩸 <b>Máu</b>, 🍖 <b>Đói</b>, 💧 <b>Khát</b>, 🧠 <b>Tinh thần</b> ở mức an toàn. Nâng cấp nơi trú ẩn để chống bão đêm, hoặc xây dựng 🗼 <b>Ngọn Hải Đăng SOS</b> để hoàn thành sớm!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="audio.js"></script>
+  <script src="events.js"></script>
+  <script src="player3d.js"></script>
+  <script src="three_world.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

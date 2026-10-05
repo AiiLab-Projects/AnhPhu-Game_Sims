@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopkeeper Simulator - Tiệm Tạp Hóa Thịnh Vượng</title>
+  <meta name="description" content="Game mô phỏng quản lý tiệm tạp hóa, siêu thị mini vui nhộn với đầy đủ tính năng nhập hàng, định giá, nâng cấp, nhân viên và sự kiện ngẫu nhiên!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <!-- TOP HEADER / STATUS BAR -->
+    <header id="top-bar">
+      <div class="brand">
+        <span class="store-icon">🏪</span>
+        <div class="store-name-container">
+          <h1 id="store-name-display" title="Nhấp để đổi tên">Tiệm Bách Hóa Vui Vẻ</h1>
+          <button id="btn-edit-name" title="Đổi tên quán">✏️</button>
+        </div>
+      </div>
+
+      <div class="stats-group">
+        <div class="stat-pill money-pill" title="Tiền mặt hiện tại">
+          <span class="pill-icon">💵</span>
+          <div class="pill-info">
+            <span class="pill-label">Ngân quỹ</span>
+            <span id="stat-money" class="pill-value text-gold">500.000 ₫</span>
+          </div>
+        </div>
+
+        <div class="stat-pill rep-pill" title="Danh tiếng cửa hàng (Ảnh hưởng đến lượng khách)">
+          <span class="pill-icon">⭐</span>
+          <div class="pill-info">
+            <span class="pill-label">Uy tín</span>
+            <span id="stat-reputation" class="pill-value text-cyan">50 / 100</span>
+          </div>
+        </div>
+
+        <div class="stat-pill cleanliness-pill" title="Độ sạch sẽ cửa hàng">
+          <span class="pill-icon">✨</span>
+          <div class="pill-info">
+            <span class="pill-label">Sạch sẽ</span>
+            <span id="stat-cleanliness" class="pill-value text-green">100%</span>
+          </div>
+        </div>
+
+        <div class="stat-pill time-pill" title="Thời gian trong ngày">
+          <span class="pill-icon">🕒</span>
+          <div class="pill-info">
+            <span class="pill-label" id="day-counter">Ngày 1</span>
+            <span id="clock-display" class="pill-value text-orange">08:00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="speed-controls">
+        <button id="btn-speed-pause" class="btn-ctrl" title="Tạm dừng">⏸️</button>
+        <button id="btn-speed-1" class="btn-ctrl active" title="Tốc độ 1x">1x</button>
+        <button id="btn-speed-2" class="btn-ctrl" title="Tốc độ 2x">2x</button>
+        <button id="btn-speed-3" class="btn-ctrl" title="Tốc độ 3x">3x</button>
+        <button id="btn-audio-toggle" class="btn-ctrl" title="Bật/Tắt âm thanh">🔊</button>
+        <button id="btn-quick-save" class="btn-ctrl btn-save-quick" title="Lưu game ngay lập tức">💾 Lưu</button>
+      </div>
+    </header>
+
+    <!-- FLOATING TOAST NOTIFICATION CONTAINER -->
+    <div id="game-toast-container" class="toast-container"></div>
+
+    <!-- MAIN INTERFACE: CANVAS SIMULATION + RIGHT CONTROL TABS -->
+    <main id="main-content">
+      <!-- LEFT: INTERACTIVE SHOP CANVAS & BOTTOM QUICK ACTIONS -->
+      <section id="shop-view-section">
+        <div class="canvas-header-info">
+          <button id="btn-toggle-store" class="store-status-btn open" title="Nhấp để Mở hoặc Đóng cửa hàng">
+            <span class="pulse-dot"></span>
+            <span id="store-status-text">ĐANG MỞ CỬA</span>
+            <span class="status-action-hint">✕ Đóng tiệm</span>
+          </button>
+          <div class="visitors-badge">👥 Khách trong tiệm: <span id="customer-count">0</span> / <span id="store-capacity">6</span></div>
+          <div class="event-ticker" id="event-ticker">Chào mừng đến với cửa hàng! Hãy nhập hàng lên kệ để bắt đầu bán.</div>
+        </div>
+
+        <div class="canvas-wrapper">
+          <canvas id="shop-canvas"></canvas>
+          <!-- Floating interactive overlays / notifications on canvas -->
+          <div id="canvas-overlay-container"></div>
+          <!-- Quick cashier register prompt mini-game or manual click -->
+          <div id="cashier-zone-prompt" class="cashier-prompt hidden">
+            <div class="cashier-bubble">
+              <span class="bubble-icon">🔔</span>
+              <span>Khách đang chờ tính tiền! <b>(Click để thanh toán)</b></span>
+            </div>
+          </div>
+          <!-- Banner overlay when shop is closed -->
+          <div id="shop-closed-banner" class="shop-closed-overlay hidden">
+            <div class="closed-card">
+              <div class="closed-icon">🔒</div>
+              <h3>CỬA HÀNG ĐANG TẠM ĐÓNG</h3>
+              <p>Khách sẽ không vào. Bạn có thể thoải mái nhập hàng, đổi giá, sắp xếp kệ hoặc dọn dẹp quán!</p>
+              <div class="closed-action-buttons">
+                <button id="btn-overlay-reopen" class="btn-primary-small">🟢 Mở Cửa Đón Khách</button>
+                <button id="btn-overlay-endday" class="btn-secondary-small">🌙 Kết Thúc Ngày Sớm</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTTOM QUICK STATS & EVENT FEED -->
+        <div id="bottom-quick-bar">
+          <div class="quick-metric">
+            <span class="metric-title">Doanh thu hôm nay:</span>
+            <span id="metric-today-revenue" class="metric-val text-green">+0 ₫</span>
+          </div>
+          <div class="quick-metric">
+            <span class="metric-title">Tiền Tip:</span>
+            <span id="metric-today-tips" class="metric-val text-gold">+0 ₫</span>
+          </div>
+          <div class="quick-metric">
+            <span class="metric-title">Khách đã phục vụ:</span>
+            <span id="metric-today-served" class="metric-val">0</span>
+          </div>
+          <div class="quick-metric">
+            <span class="metric-title">Tồn kho chung:</span>
+            <span id="metric-total-stock" class="metric-val">0 món</span>
+          </div>
+          <button id="btn-quick-restock" class="btn-action pulse" title="Xếp tự động toàn bộ hàng từ kho lên các kệ còn trống">
+            ⚡ Xếp nhanh lên kệ
+          </button>
+          <button id="btn-clean-store" class="btn-action-secondary" title="Dọn rác, lau sàn tiệm (+10% sạch sẽ)">
+            🧹 Quét dọn quán
+          </button>
+          <button id="btn-end-day-early" class="btn-action-warning" title="Đóng cửa và kết toán doanh thu ngày hôm nay">
+            🌙 Kết thúc ngày
+          </button>
+        </div>
+      </section>
+
+      <!-- RIGHT: TABBED MANAGEMENT HUB -->
+      <aside id="management-hub">
+        <!-- TAB NAVIGATION -->
+        <nav class="hub-tabs">
+          <button class="hub-tab active" data-tab="tab-shelves">
+            <span class="tab-icon">🛒</span>
+            <span class="tab-text">Kệ hàng</span>
+          </button>
+          <button class="hub-tab" data-tab="tab-market">
+            <span class="tab-icon">📦</span>
+            <span class="tab-text">Nhập sỉ</span>
+          </button>
+          <button class="hub-tab" data-tab="tab-upgrades">
+            <span class="tab-icon">🏗️</span>
+            <span class="tab-text">Nâng cấp</span>
+          </button>
+          <button class="hub-tab" data-tab="tab-staff">
+            <span class="tab-icon">👔</span>
+            <span class="tab-text">Nhân sự</span>
+          </button>
+          <button class="hub-tab" data-tab="tab-marketing">
+            <span class="tab-icon">📢</span>
+            <span class="tab-text">Quảng cáo</span>
+          </button>
+          <button class="hub-tab" data-tab="tab-finance">
+            <span class="tab-icon">📊</span>
+            <span class="tab-text">Tài chính</span>
+          </button>
+        </nav>
+
+        <!-- TAB CONTENTS -->
+        <div class="hub-content-container">
+          <!-- 1. TAB SHELVES & PRICING -->
+          <div id="tab-shelves" class="tab-pane active">
+            <div class="pane-header">
+              <div class="pane-title-group">
+                <h3>Quản Lý Kệ Trưng Bày</h3>
+                <p class="subtext">Gán mặt hàng lên kệ và thiết lập giá bán niêm yết</p>
+              </div>
+              <span class="shelf-count-badge" id="shelf-usage-badge">Kệ: 3 / 3</span>
+            </div>
+
+            <!-- Shelf Grid -->
+            <div id="shelves-list" class="shelves-grid">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <!-- 2. TAB WHOLESALE MARKET -->
+          <div id="tab-market" class="tab-pane">
+            <div class="pane-header">
+              <div class="pane-title-group">
+                <h3>Chợ Đầu Mối (Nhập Hàng Sỉ)</h3>
+                <p class="subtext">Giá cả biến động hàng ngày theo thị trường. Nhập nhiều để có giá tốt!</p>
+              </div>
+              <div class="warehouse-badge">
+                Kho: <span id="wh-used">0</span> / <span id="wh-max">50</span>
+              </div>
+            </div>
+
+            <div class="category-filter-bar" id="market-filter-bar">
+              <button class="filter-chip active" data-cat="all">Tất cả</button>
+              <button class="filter-chip" data-cat="drink">🥤 Đồ uống</button>
+              <button class="filter-chip" data-cat="snack">🍿 Bánh kẹo</button>
+              <button class="filter-chip" data-cat="food">🍜 Đồ ăn nhanh</button>
+              <button class="filter-chip" data-cat="daily">🧴 Nhu yếu phẩm</button>
+              <button class="filter-chip" data-cat="tech">🎧 Điện tử</button>
+            </div>
+
+            <div id="market-items-list" class="market-catalog">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- 3. TAB STORE UPGRADES -->
+          <div id="tab-upgrades" class="tab-pane">
+            <div class="pane-header">
+              <div class="pane-title-group">
+                <h3>Nâng Cấp Cửa Hàng & Tiện Ích</h3>
+                <p class="subtext">Tăng sức chứa, mở thêm kệ, thu hút khách VIP và tăng tốc thanh toán</p>
+              </div>
+            </div>
+
+            <div id="upgrades-list" class="upgrades-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- 4. TAB STAFF / NHÂN SỰ -->
+          <div id="tab-staff" class="tab-pane">
+            <div class="pane-header">
+              <div class="pane-title-group">
+                <h3>Tuyển Dụng & Nhân Sự</h3>
+                <p class="subtext">Thuê nhân viên giúp tự động hóa khâu thu ngân, bốc dỡ hàng và quét dọn</p>
+              </div>
+              <span class="wage-summary-badge" id="daily-wage-badge">Lương/ngày: 0 ₫</span>
+            </div>
+
+            <div id="staff-list" class="staff-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- 5. TAB MARKETING -->
+          <div id="tab-marketing" class="tab-pane">
+            <div class="pane-header">
+              <div class="pane-title-group">
+                <h3>Chiến Dịch Truyền Thông & Marketing</h3>
+                <p class="subtext">Quảng bá cửa hàng để thu hút đông đảo khách và nhiều tệp khách hàng sang chảnh</p>
+              </div>
+            </div>
+
+            <div id="marketing-list" class="marketing-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- 6. TAB FINANCE & LOGS -->
+          <div id="tab-finance" class="tab-pane">
+            <div class="pane-header">
+              <div class="pane-title-group">
+                <h3>Báo Cáo Tài Chính & Lịch Sử</h3>
+                <p class="subtext">Theo dõi doanh thu, chi phí, biên lợi nhuận và đánh giá từ khách</p>
+              </div>
+            </div>
+
+            <div class="finance-cards-row">
+              <div class="fin-card">
+                <span class="fin-label">Tổng doanh thu tích lũy</span>
+                <span id="fin-alltime-rev" class="fin-val text-green">0 ₫</span>
+              </div>
+              <div class="fin-card">
+                <span class="fin-label">Tổng tiền Tip tích lũy</span>
+                <span id="fin-alltime-tips" class="fin-val text-gold">0 ₫</span>
+              </div>
+              <div class="fin-card">
+                <span class="fin-label">Tổng lợi nhuận ròng</span>
+                <span id="fin-alltime-profit" class="fin-val text-gold">0 ₫</span>
+              </div>
+              <div class="fin-card">
+                <span class="fin-label">Tổng khách đã phục vụ</span>
+                <span id="fin-alltime-customers" class="fin-val text-cyan">0</span>
+              </div>
+              <div class="fin-card">
+                <span class="fin-label">Khách hài lòng</span>
+                <span id="fin-satisfaction-rate" class="fin-val text-orange">100%</span>
+              </div>
+            </div>
+
+            <h4 class="section-title">Nhật ký hoạt động gần đây</h4>
+            <div id="activity-log" class="activity-log-box">
+              <!-- Logs populated here -->
+            </div>
+
+            <div class="save-game-controls">
+              <button id="btn-manual-save" class="btn-util">💾 Lưu Game</button>
+              <button id="btn-export-save" class="btn-util">📤 Xuất Save</button>
+              <button id="btn-import-save" class="btn-util">📥 Nhập Save</button>
+              <button id="btn-reset-game" class="btn-util btn-danger">🔄 Chơi lại từ đầu</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- MODAL: DAILY END SUMMARY REPORT -->
+  <div id="modal-daily-report" class="modal-backdrop hidden">
+    <div class="modal-card report-modal">
+      <div class="modal-header">
+        <div class="report-title-icon">📊</div>
+        <div>
+          <h2 id="report-day-title">Tổng Kết Ngày 1</h2>
+          <p class="report-subtitle">Cửa hàng đóng cửa nghỉ ngơi & kiểm toán doanh thu</p>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <div class="report-summary-box">
+          <div class="report-line">
+            <span>Doanh thu bán lẻ:</span>
+            <b id="rep-income" class="text-green">+0 ₫</b>
+          </div>
+          <div class="report-line">
+            <span>Tiền Tip khách tặng 💖:</span>
+            <b id="rep-tips" class="text-gold">+0 ₫</b>
+          </div>
+          <div class="report-line">
+            <span>Tiền vốn nhập hàng:</span>
+            <b id="rep-cost-goods" class="text-danger">-0 ₫</b>
+          </div>
+          <div class="report-line">
+            <span>Chi phí mặt bằng & điện nước:</span>
+            <b id="rep-rent" class="text-danger">-50.000 ₫</b>
+          </div>
+          <div class="report-line">
+            <span>Tiền lương nhân viên:</span>
+            <b id="rep-wages" class="text-danger">-0 ₫</b>
+          </div>
+          <div class="report-line">
+            <span>Chi phí Marketing:</span>
+            <b id="rep-marketing" class="text-danger">-0 ₫</b>
+          </div>
+          <hr class="report-divider">
+          <div class="report-line total-line">
+            <span>LỢI NHUẬN RÒNG TRONG NGÀY:</span>
+            <b id="rep-net-profit" class="text-gold">+0 ₫</b>
+          </div>
+        </div>
+
+        <div class="report-customer-feedback">
+          <h4>Nhận xét của khách hàng hôm nay:</h4>
+          <div id="report-reviews-container" class="reviews-list">
+            <!-- Review items -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-start-next-day" class="btn-primary-large">
+          ☀️ Bắt đầu Ngày Mới Tiếp Theo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: RANDOM EVENT POPUP -->
+  <div id="modal-event" class="modal-backdrop hidden">
+    <div class="modal-card event-modal">
+      <div class="event-icon-badge" id="event-modal-icon">⚡</div>
+      <h2 id="event-modal-title">Sự Kiện Bất Ngờ!</h2>
+      <p id="event-modal-desc" class="event-desc">Nội dung sự kiện...</p>
+      <div id="event-modal-choices" class="event-choices-row">
+        <!-- Option buttons dynamically generated -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ASSIGN ITEM TO SHELF -->
+  <div id="modal-assign-shelf" class="modal-backdrop hidden">
+    <div class="modal-card shelf-assign-modal">
+      <div class="modal-header">
+        <h3 id="assign-shelf-title">Chọn Món Hàng Bày Lên Kệ</h3>
+        <button class="btn-close-modal" id="btn-close-assign-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="subtext">Chọn một loại hàng hóa từ Kho lưu trữ để đặt lên kệ này:</p>
+        <div id="warehouse-selection-grid" class="wh-pick-grid">
+          <!-- Selection items -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIDDEN FILE INPUT FOR IMPORT -->
+  <input type="file" id="file-input-save" accept=".json" style="display: none;">
+
+  <!-- SCRIPTS -->
+  <script src="audio.js"></script>
+  <script src="data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
