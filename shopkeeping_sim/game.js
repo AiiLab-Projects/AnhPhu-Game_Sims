@@ -59,6 +59,13 @@ class ShopkeeperGame {
     this.floatingTexts = []; // [{text, x, y, color, life}]
     this.cashierQueue = []; // customers waiting at checkout
     this.checkoutTimer = 0;
+
+    // Anti-Theft & Security System State
+    this.activeQTE = false;
+    this.activeDasher = null;
+    this.qteTimeLeft = 0;
+    this.qteTotalTime = 3;
+    this.pendingScammer = null;
     
     // Dynamic Staff Entities (Animated Running & Working)
     this.staffEntities = {
@@ -108,6 +115,16 @@ class ShopkeeperGame {
     this.initStaffEntities();
     this.bindDOMEvents();
     this.updateAllUI();
+
+    // Initialize 3D Supermarket Engine
+    if (typeof Shop3D !== 'undefined') {
+      try {
+        this.shop3D = new Shop3D(this);
+      } catch (err) {
+        console.error('Failed to initialize Shop3D:', err);
+      }
+    }
+
     this.log(`🏪 ${this.storeName} chính thức mở cửa ngày thứ ${this.day}!`);
     
     // Start Simulation Loop
@@ -204,7 +221,13 @@ class ShopkeeperGame {
     if (this.gameSpeed > 0 && !this.isDayEnding) {
       this.update(dt * this.gameSpeed);
     }
-    this.render();
+    
+    if (this.shop3D) {
+      this.shop3D.update(dt);
+      this.shop3D.render();
+    } else {
+      this.render();
+    }
 
     this.animFrameId = requestAnimationFrame(this.loop);
   }
@@ -244,6 +267,19 @@ class ShopkeeperGame {
       this.floatingTexts[i].y -= dt * 25;
       if (this.floatingTexts[i].life <= 0) {
         this.floatingTexts.splice(i, 1);
+      }
+    }
+
+    // 9. Update active Dasher QTE
+    if (this.activeQTE) {
+      this.qteTimeLeft -= dt;
+      const bar = document.getElementById('qte-timer-bar');
+      if (bar) {
+        const pct = Math.max(0, (this.qteTimeLeft / this.qteTotalTime) * 100);
+        bar.style.width = `${pct}%`;
+      }
+      if (this.qteTimeLeft <= 0) {
+        this.handleQTEFail();
       }
     }
 
@@ -551,22 +587,47 @@ class ShopkeeperGame {
   }
 
   spawnCustomer() {
-    let hasVipUpgrade = this.purchasedUpgrades.includes('maneki_neko');
-    let rand = Math.random();
+    const hasVipUpgrade = this.purchasedUpgrades.includes('maneki_neko');
+    const hasDog = this.purchasedUpgrades.includes('shop_dog');
+    const rand = Math.random();
 
     let archetype = CUSTOMER_TYPES[0]; // default student
-    if (rand < 0.05 && !this.hiredStaff.includes('staff_security')) {
-      archetype = CUSTOMER_TYPES.find(c => c.type === 'thief') || CUSTOMER_TYPES[0];
-    } else if (rand < (hasVipUpgrade ? 0.28 : 0.15)) {
+
+    // Theft spawn chance (50% reduction if Shop Dog is present)
+    const thiefThreshold = hasDog ? 0.06 : 0.12;
+
+    if (rand < thiefThreshold) {
+      const thiefSub = Math.random();
+      if (thiefSub < 0.35) {
+        archetype = CUSTOMER_TYPES.find(c => c.type === 'the_shoplifter') || CUSTOMER_TYPES[0];
+      } else if (thiefSub < 0.65) {
+        archetype = CUSTOMER_TYPES.find(c => c.type === 'the_dasher') || CUSTOMER_TYPES[0];
+      } else if (thiefSub < 0.85) {
+        archetype = CUSTOMER_TYPES.find(c => c.type === 'the_scammer') || CUSTOMER_TYPES[0];
+      } else {
+        archetype = CUSTOMER_TYPES.find(c => c.type === 'distraction_bait') || CUSTOMER_TYPES[0];
+        // Distraction Crew: spawn accomplice thief shortly
+        setTimeout(() => {
+          if (this.isOpen) {
+            const thiefArch = CUSTOMER_TYPES.find(c => c.type === 'distraction_thief');
+            if (thiefArch) this.createCustomerEntity(thiefArch);
+          }
+        }, 1500);
+      }
+    } else if (rand < (hasVipUpgrade ? 0.32 : 0.20)) {
       archetype = CUSTOMER_TYPES.find(c => c.type === 'vip') || CUSTOMER_TYPES[3];
-    } else if (rand < 0.45) {
+    } else if (rand < 0.50) {
       archetype = CUSTOMER_TYPES.find(c => c.type === 'office') || CUSTOMER_TYPES[1];
-    } else if (rand < 0.7) {
+    } else if (rand < 0.75) {
       archetype = CUSTOMER_TYPES.find(c => c.type === 'housewife') || CUSTOMER_TYPES[2];
-    } else if (rand < 0.85) {
+    } else {
       archetype = CUSTOMER_TYPES.find(c => c.type === 'tiktoker') || CUSTOMER_TYPES[4];
     }
 
+    this.createCustomerEntity(archetype);
+  }
+
+  createCustomerEntity(archetype) {
     const entranceX = 50;
     const entranceY = (this.canvas ? this.canvas.height : 400) * 0.85;
 
@@ -584,15 +645,22 @@ class ShopkeeperGame {
       maxPatience: (archetype.patience || 20),
       currentShelfTarget: null,
       browseTimer: 0,
-      speech: '👋',
+      speech: archetype.isSpecial ? '👀' : '👋',
       speechTimer: 2,
-      satisfaction: 100
+      satisfaction: 100,
+      hasStolen: false,
+      stolenItem: null,
+      isAlerted: false,
+      isCaught: false,
+      alarmTriggered: false,
+      speedMultiplier: 1.0
     };
 
     this.customers.push(cust);
     const countEl = document.getElementById('customer-count');
     if (countEl) countEl.innerText = this.customers.length;
     gameAudio.playDoorBell();
+    return cust;
   }
 
   updateCustomers(dt) {
@@ -604,17 +672,42 @@ class ShopkeeperGame {
         c.speechTimer -= dt;
       }
 
-      // Movement step
+      // Movement step with dasher speed support
       const dx = c.targetX - c.x;
       const dy = c.targetY - c.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const speed = 70 * (c.archetype.speed || 1.2);
+      const baseSpeed = 70 * (c.archetype.speed || 1.2);
+      const currentSpeed = baseSpeed * (c.speedMultiplier || 1.0);
 
       if (dist > 5) {
-        c.x += (dx / dist) * speed * dt;
-        c.y += (dy / dist) * speed * dt;
+        c.x += (dx / dist) * currentSpeed * dt;
+        c.y += (dy / dist) * currentSpeed * dt;
       } else {
         this.handleCustomerArrival(c);
+      }
+
+      // Security Sensor Gates Alarm check as thief nears exit
+      if (c.hasStolen && !c.isCaught && c.state === 'leaving' && dist <= 35) {
+        if (this.purchasedUpgrades.includes('security_gates') && !c.alarmTriggered) {
+          c.alarmTriggered = true;
+          gameAudio.playAlarm();
+          this.addFloatingText('🚨 CỔNG TỪ BÁO ĐỘNG ĐỎ!', c.x, c.y - 25, '#ef4444');
+          this.log(`🚨 Cổng từ an ninh báo động: Phát hiện ${c.archetype.name} mang hàng chưa thanh toán ra cửa!`);
+
+          // Security Guard automatic intercept
+          if (this.hiredStaff.includes('staff_security')) {
+            c.isCaught = true;
+            c.state = 'leaving';
+            c.speech = '👮 Bị bảo vệ chặn tại cổng từ!';
+            c.speechTimer = 3;
+            this.money += 35000;
+            this.reputation = Math.min(100, this.reputation + 4);
+            gameAudio.playTackle();
+            this.addFloatingText('👮 BẢO VỆ TÓM TẠI CỬA! +35.000₫', c.x, c.y - 30, '#34d399');
+            this.log('👮 Bảo vệ chuyên nghiệp đã kịp thời tóm gọn kẻ trộm tại cổng từ!');
+            this.updateStatsUI();
+          }
+        }
       }
 
       // If customer ran out of patience
@@ -630,7 +723,12 @@ class ShopkeeperGame {
       }
 
       // Exit reached
-      if (c.state === 'leaving' && dist <= 10) {
+      if (c.state === 'leaving' && dist <= 12) {
+        if (c.hasStolen && !c.isCaught) {
+          this.reputation = Math.max(0, this.reputation - 3);
+          this.log(`💸 ${c.archetype.name} đã tẩu thoát qua cửa cùng món hàng! Hãy nâng cấp an ninh.`);
+          this.updateStatsUI();
+        }
         this.customers.splice(i, 1);
         const countEl = document.getElementById('customer-count');
         if (countEl) countEl.innerText = this.customers.length;
@@ -647,46 +745,84 @@ class ShopkeeperGame {
       if (!this.cashierQueue.includes(c)) {
         this.cashierQueue.push(c);
       }
+    } else if (c.state === 'commotion') {
+      // Distraction bait makes a scene
+      this.cleanliness = Math.max(10, this.cleanliness - 15);
+      gameAudio.playAngry();
+      c.speech = '😱 Ôi trời ơi, vỡ đồ ngất xỉu rồi!';
+      c.speechTimer = 3.5;
+      this.addFloatingText('💥 ĐỔ VỠ ĐỒ ĐẠC! -15% Sạch', c.x, c.y - 25, '#ef4444');
+      this.log('💥 Kẻ dàn cảnh vừa cố tình gây đổ vỡ làm bẩn sàn tiệm và gây chú ý! Hãy coi chừng kệ hàng cao cấp!');
+      
+      // Spawn dirt patches
+      this.dirtPatches.push(
+        { x: c.x - 15, y: c.y - 10, r: 16 },
+        { x: c.x + 15, y: c.y + 10, r: 14 }
+      );
+      c.state = 'leaving';
+      c.targetX = 20;
+      this.updateStatsUI();
     }
   }
 
   assignCustomerToShelf(c) {
-    if (c.archetype.type === 'thief') {
-      const populatedShelves = this.shelves.filter(s => s.itemId && s.quantity > 0);
-      if (populatedShelves.length > 0) {
-        const shelf = populatedShelves[Math.floor(Math.random() * populatedShelves.length)];
-        c.currentShelfTarget = shelf;
-        c.targetX = shelf.x + (Math.random() * 20 - 10);
-        c.targetY = shelf.y + 35;
-        c.state = 'browsing';
-        c.speech = '👀 Rình rình...';
-        c.speechTimer = 2;
-      } else {
-        c.state = 'leaving';
-        c.targetX = 20;
-      }
+    const populatedShelves = this.shelves.filter(s => s.itemId && s.quantity > 0);
+
+    // Distraction Bait: head to store center
+    if (c.archetype.subType === 'distraction_bait') {
+      const w = this.canvas ? this.canvas.width : 600;
+      const h = this.canvas ? this.canvas.height : 400;
+      c.targetX = w * 0.45;
+      c.targetY = h * 0.48;
+      c.state = 'commotion';
+      c.speech = '🚶 Đi lảo đảo...';
+      c.speechTimer = 2;
       return;
     }
 
-    const available = this.shelves.filter(s => s.itemId && s.quantity > 0);
-    if (available.length === 0) {
+    if (populatedShelves.length === 0) {
       c.state = 'leaving';
       c.speech = '😕 Hết hàng rồi à?';
       c.speechTimer = 2.5;
-      c.satisfaction = 30;
       c.targetX = 20;
       c.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
       return;
     }
 
-    let preferred = available.filter(s => {
+    // Shoplifter & Distraction Thief seek highest value shelves
+    if (c.archetype.subType === 'shoplifter' || c.archetype.subType === 'distraction_thief') {
+      const sorted = [...populatedShelves].sort((a, b) => (b.price || 0) - (a.price || 0));
+      const shelf = sorted[0] || populatedShelves[0];
+      c.currentShelfTarget = shelf;
+      c.targetX = shelf.x + (Math.random() * 20 - 10);
+      c.targetY = shelf.y + 35;
+      c.state = 'browsing';
+      c.speech = '👀 Nhìn quanh lén lút...';
+      c.speechTimer = 2;
+      return;
+    }
+
+    // Dasher & Scammer pick any available goods
+    if (c.archetype.subType === 'dasher' || c.archetype.subType === 'scammer') {
+      const shelf = populatedShelves[Math.floor(Math.random() * populatedShelves.length)];
+      c.currentShelfTarget = shelf;
+      c.targetX = shelf.x + (Math.random() * 20 - 10);
+      c.targetY = shelf.y + 35;
+      c.state = 'browsing';
+      c.speech = c.archetype.subType === 'dasher' ? '🏃 Chuẩn bị bứt tốc...' : '🕵️ Tìm món đắt để tráo tem...';
+      c.speechTimer = 2;
+      return;
+    }
+
+    // Normal customer preference logic
+    let preferred = populatedShelves.filter(s => {
       const itm = GAME_ITEMS.find(i => i.id === s.itemId);
       return itm && c.archetype.preferredCategories && c.archetype.preferredCategories.includes(itm.category);
     });
 
     const chosenShelf = preferred.length > 0
       ? preferred[Math.floor(Math.random() * preferred.length)]
-      : available[Math.floor(Math.random() * available.length)];
+      : populatedShelves[Math.floor(Math.random() * populatedShelves.length)];
 
     c.currentShelfTarget = chosenShelf;
     c.targetX = chosenShelf.x + (Math.random() * 20 - 10);
@@ -711,24 +847,71 @@ class ShopkeeperGame {
       return;
     }
 
-    // Thief logic
-    if (c.archetype.type === 'thief') {
-      if (this.hiredStaff.includes('staff_security')) {
-        c.speech = '👮 Bị bảo vệ bắt!';
-        c.speechTimer = 2.5;
-        this.addFloatingText('🚨 ĐÃ BẮT TRỘM!', c.x, c.y - 20, '#34d399');
-        gameAudio.playUpgrade();
-        c.state = 'leaving';
-        c.targetX = 20;
-        return;
-      }
+    // 1. Shoplifter (Kẻ trộm vặt giấu đồ)
+    if (c.archetype.subType === 'shoplifter') {
       shelf.quantity = Math.max(0, shelf.quantity - 1);
-      c.speech = '🥷 Lấy trộm được rồi!';
-      c.speechTimer = 2;
-      this.addFloatingText(`-1 ${item.name} (Bị trộm)`, c.x, c.y - 20, '#f87171');
+      c.hasStolen = true;
+      c.stolenItem = item;
+
+      // Detection upgrade check
+      const hasDetection = this.purchasedUpgrades.includes('convex_mirror') || this.purchasedUpgrades.includes('cctv_security');
+      if (hasDetection) {
+        c.isAlerted = true;
+        c.speech = '⚠️ (Chuẩn bị nhét vào áo)';
+        c.speechTimer = 3;
+        this.addFloatingText('🔍 PHÁT HIỆN KẺ GIẤU ĐỒ!', c.x, c.y - 25, '#fbbf24');
+        this.log(`🔍 Gương cầu lồi / Camera đã phát hiện ${c.archetype.name} chuẩn bị giấu ${item.name}! Hãy bấm Khám xét ngay.`);
+      } else {
+        c.speech = '🤫 Đã giấu vào áo!';
+        c.speechTimer = 2.5;
+      }
+
       c.state = 'leaving';
       c.targetX = 20;
-      this.log(`⚠️ Kẻ trộm đã lấy mất 1 ${item.name}! Hãy thuê bảo vệ để đề phòng.`);
+      c.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
+      this.renderShelvesTab();
+      return;
+    }
+
+    // 2. Dasher (Khách chạy làng / Grab & Run)
+    if (c.archetype.subType === 'dasher') {
+      shelf.quantity = Math.max(0, shelf.quantity - 1);
+      c.hasStolen = true;
+      c.stolenItem = item;
+      c.speech = '⚡ CƯỚP ĐƯỢC RỒI! PHÓNG THÔI!';
+      c.speechTimer = 3;
+      c.state = 'dashing';
+      c.speedMultiplier = this.purchasedUpgrades.includes('emergency_door_lock') ? 1.7 : 2.7;
+      c.targetX = 20;
+      c.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
+      this.triggerDasherQTE(c);
+      this.renderShelvesTab();
+      return;
+    }
+
+    // 3. Scammer (Kẻ tráo tem giá / tiền giả)
+    if (c.archetype.subType === 'scammer') {
+      shelf.quantity = Math.max(0, shelf.quantity - 1);
+      c.cart.push({ itemId: item.id, name: item.name, price: shelf.price, icon: item.icon });
+      c.isScammer = true;
+      c.speech = '😏 Đã dán đè tem...';
+      c.speechTimer = 2;
+      this.renderShelvesTab();
+      this.routeToNextActionOrCheckout(c);
+      return;
+    }
+
+    // 4. Distraction Thief (Kẻ trộm đi kèm dàn cảnh)
+    if (c.archetype.subType === 'distraction_thief') {
+      const takeQty = Math.min(shelf.quantity, 2);
+      shelf.quantity -= takeQty;
+      c.hasStolen = true;
+      c.stolenItem = item;
+      c.speech = '🤫 Thừa cơ vơ vét đồ!';
+      c.speechTimer = 3;
+      c.state = 'leaving';
+      c.targetX = 20;
+      c.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
       this.renderShelvesTab();
       return;
     }
@@ -833,6 +1016,31 @@ class ShopkeeperGame {
     const cust = this.cashierQueue.shift();
     if (!cust) return;
 
+    // Check Scammer Archetype (Kẻ tráo tem giá / tiền giả)
+    if (cust.isScammer && !cust.scammerResolved) {
+      if (this.purchasedUpgrades.includes('barcode_scanner_ai')) {
+        // AI Barcode Scanner automatically catches fraud!
+        gameAudio.playBuzzer();
+        this.money += 50000;
+        this.reputation = Math.min(100, this.reputation + 4);
+        gameAudio.playUpgrade();
+        this.addFloatingText('🤖 AI BẮT LỪA ĐẢO +50.000₫', cust.x, cust.y - 30, '#38bdf8');
+        this.log('🤖 Máy quét AI đã phát hiện tem giá bị dán đè! Tên lừa đảo bị bảo vệ lập biên bản và nộp phạt 50.000₫!');
+        cust.speech = '🤖 Bị máy quét AI soi ra rồi!';
+        cust.speechTimer = 2.5;
+        cust.state = 'leaving';
+        cust.targetX = 20;
+        cust.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
+        this.updateStatsUI();
+        return;
+      } else {
+        // Put back at front of queue and show manual inspection modal
+        this.cashierQueue.unshift(cust);
+        this.openScammerModal(cust);
+        return;
+      }
+    }
+
     let billTotal = 0;
     cust.cart.forEach(item => {
       billTotal += item.price;
@@ -920,6 +1128,210 @@ class ShopkeeperGame {
     });
 
     this.updateStatsUI();
+  }
+
+  // DASHER & QTE METHODS
+  triggerDasherQTE(cust) {
+    this.activeQTE = true;
+    this.activeDasher = cust;
+    const hasLock = this.purchasedUpgrades.includes('emergency_door_lock');
+    this.qteTotalTime = hasLock ? 5.0 : 3.2;
+    this.qteTimeLeft = this.qteTotalTime;
+
+    gameAudio.playAlarm();
+    const overlay = document.getElementById('qte-dasher-overlay');
+    if (overlay) overlay.classList.remove('hidden');
+
+    const desc = document.querySelector('.qte-subtitle');
+    const stolenVal = cust.stolenItem ? cust.stolenItem.basePrice : 50000;
+    if (desc) {
+      desc.innerText = `Kẻ trộm vừa cướp món hàng [${cust.stolenItem?.name || 'Đồ giá trị'}] (${this.formatCurrency(stolenVal)}) và đang phi nước đại ra cửa!`;
+    }
+    this.log(`🚨 BÁO ĐỘNG: Kẻ chạy làng đang phi ra cửa với món hàng ${this.formatCurrency(stolenVal)}! Phản xạ nhanh!`);
+  }
+
+  handleQTESuccess(actionType) {
+    if (!this.activeQTE || !this.activeDasher) return;
+    const cust = this.activeDasher;
+    const stolenVal = cust.stolenItem ? cust.stolenItem.basePrice : 50000;
+
+    this.activeQTE = false;
+    this.activeDasher = null;
+    const overlay = document.getElementById('qte-dasher-overlay');
+    if (overlay) overlay.classList.add('hidden');
+
+    cust.state = 'leaving';
+    cust.speedMultiplier = 0.6;
+    cust.targetX = 20;
+    cust.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
+
+    this.money += 50000;
+    this.reputation = Math.min(100, this.reputation + 5);
+    gameAudio.playTackle();
+
+    if (actionType === 'door') {
+      cust.speech = '💥 Á đù! Cửa sập mất rồi!';
+      this.addFloatingText('🚪 SẬP CỬA BẮT TRỘM +50.000₫', cust.x, cust.y - 30, '#38bdf8');
+      this.log(`🚪 RẦM! Cửa sập khẩn cấp đóng kịp thời! Tên chạy làng đâm sầm vào cửa ngã sõng soài, thu hồi ${this.formatCurrency(stolenVal)} tiền hàng và thưởng 50.000₫!`);
+    } else {
+      cust.speech = '💫 Vấp chổi ngã nhào!';
+      this.addFloatingText('🧹 NÉM CHỔI BẮT TRỘM +50.000₫', cust.x, cust.y - 30, '#fbbf24');
+      this.log(`🧹 Bạn ném cán chổi cản đường chuẩn xác! Tên chạy làng vấp ngã nhào, thu hồi toàn bộ hàng hóa và thưởng 50.000₫!`);
+    }
+
+    this.updateStatsUI();
+  }
+
+  handleQTEFail() {
+    if (!this.activeQTE || !this.activeDasher) return;
+    const cust = this.activeDasher;
+    const stolenVal = cust.stolenItem ? cust.stolenItem.basePrice : 50000;
+
+    this.activeQTE = false;
+    this.activeDasher = null;
+    const overlay = document.getElementById('qte-dasher-overlay');
+    if (overlay) overlay.classList.add('hidden');
+
+    cust.speech = '💨 Ngu gì trả tiền, lêu lêu!';
+    cust.speechTimer = 3;
+    cust.state = 'leaving';
+    cust.targetX = 20;
+    cust.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
+
+    this.reputation = Math.max(0, this.reputation - 5);
+    gameAudio.playBuzzer();
+    this.addFloatingText(`🚨 THOÁT MẤT HÀNG -${this.formatCurrency(stolenVal)}`, cust.x, cust.y - 30, '#ef4444');
+    this.log(`🚨 Kẻ chạy làng đã tẩu thoát ra đường cùng ${this.formatCurrency(stolenVal)} tiền hàng! Uy tín bị giảm 5 điểm.`);
+    this.updateStatsUI();
+  }
+
+  // SCAMMER FRAUD CHECK METHODS
+  openScammerModal(cust) {
+    this.pendingScammer = cust;
+    gameAudio.playBuzzer();
+    const overlay = document.getElementById('scammer-modal-overlay');
+    const content = document.getElementById('scammer-details-content');
+    if (!overlay || !content) return;
+
+    const item = cust.cart[0] || { name: 'Rượu Vang Đỏ Cao Cấp', price: 180000 };
+    const fakePrice = Math.round(item.price * 0.15 / 1000) * 1000;
+
+    content.innerHTML = `
+      <div class="fraud-row">
+        <span class="fraud-label">Mặt hàng quét:</span>
+        <span class="fraud-val">${item.name}</span>
+      </div>
+      <div class="fraud-row">
+        <span class="fraud-label">Giá niêm yết hệ thống:</span>
+        <span class="fraud-val" style="color: #38bdf8;">${this.formatCurrency(item.price)}</span>
+      </div>
+      <div class="fraud-row">
+        <span class="fraud-label">Tem dán đè của khách:</span>
+        <span class="fraud-val" style="color: #ef4444;">${this.formatCurrency(fakePrice)}</span>
+      </div>
+      <div class="fraud-alert-box">
+        ⚠️ Phát hiện nhãn mã vạch có vết bóc dán lại cẩu thả và số tiền mặt đưa kèm có dấu hiệu tiền giấy giả!
+      </div>
+    `;
+
+    overlay.classList.remove('hidden');
+  }
+
+  handleScammerReject() {
+    const cust = this.pendingScammer;
+    if (!cust) return;
+
+    this.cashierQueue.shift();
+    this.pendingScammer = null;
+    const overlay = document.getElementById('scammer-modal-overlay');
+    if (overlay) overlay.classList.add('hidden');
+
+    cust.scammerResolved = true;
+    cust.state = 'leaving';
+    cust.speech = '😱 Tôi xin lỗi, đừng báo công an!';
+    cust.speechTimer = 2.5;
+    cust.targetX = 20;
+    cust.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
+
+    this.money += 50000;
+    this.reputation = Math.min(100, this.reputation + 5);
+    gameAudio.playUpgrade();
+    this.addFloatingText('🔎 VẠCH TRẦN LỪA ĐẢO +50.000₫', cust.x, cust.y - 30, '#fbbf24');
+    this.log('🔎 Bạn đã dũng cảm lật tẩy chiêu trò tráo tem! Kẻ gian nộp phạt 50.000₫ và bị đuổi khỏi tiệm.');
+    this.updateStatsUI();
+  }
+
+  handleScammerAccept() {
+    const cust = this.pendingScammer;
+    if (!cust) return;
+
+    this.cashierQueue.shift();
+    this.pendingScammer = null;
+    const overlay = document.getElementById('scammer-modal-overlay');
+    if (overlay) overlay.classList.add('hidden');
+
+    cust.scammerResolved = true;
+    cust.state = 'leaving';
+    cust.speech = '😏 Dễ bị lừa ghê!';
+    cust.speechTimer = 2.5;
+    cust.targetX = 20;
+    cust.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
+
+    const penalty = 60000;
+    this.money = Math.max(0, this.money - penalty);
+    this.reputation = Math.max(0, this.reputation - 3);
+    gameAudio.playBuzzer();
+    this.addFloatingText(`💸 DÍNH BẪY LỪA ĐẢO -${this.formatCurrency(penalty)}`, cust.x, cust.y - 30, '#ef4444');
+    this.log(`💸 Bạn đã bỏ qua và chấp nhận thanh toán! Tiệm bị lỗ ${this.formatCurrency(penalty)} do tem giả / tiền âm.`);
+    this.updateStatsUI();
+  }
+
+  // CUSTOMER INTERACTION (SEARCH / APOLOGY)
+  interactWithCustomer(cust) {
+    if (!cust || cust.state === 'leaving') return;
+
+    const isThief = (cust.archetype && cust.archetype.type === 'thief') || cust.isShoplifter || cust.isDistractionThief;
+    const isBait = cust.isDistractionBait;
+
+    if (isThief) {
+      cust.state = 'leaving';
+      cust.speech = '😫 Bị tóm tang vật rồi!';
+      cust.speechTimer = 3;
+      cust.isAlerted = false;
+      cust.targetX = 20;
+      cust.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
+
+      this.money += 40000;
+      this.reputation = Math.min(100, this.reputation + 5);
+      gameAudio.playTackle();
+      this.addFloatingText('🔍 BẮT QUẢ TANG +40.000₫', cust.x, cust.y - 30, '#34d399');
+      this.log(`🎯 Khám xét chính xác! Tên trộm vặt [${cust.archetype?.name || 'Kẻ trộm'}] đã phải móc toàn bộ hàng giấu trong áo ra giao nộp và nộp phạt 40.000₫!`);
+      this.updateStatsUI();
+    } else if (isBait) {
+      cust.state = 'leaving';
+      cust.speech = '🏃 Ôi bị đuổi rồi, chuồn thôi!';
+      cust.speechTimer = 2.5;
+      cust.targetX = 20;
+      cust.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
+      this.log('👮 Bạn đã nhanh chóng đuổi kẻ gây rối dàn cảnh ra khỏi tiệm trước khi hắn làm vỡ thêm đồ!');
+      this.updateStatsUI();
+    } else {
+      // False accusation on innocent customer!
+      this.reputation = Math.max(0, this.reputation - 6);
+      const compensation = 15000;
+      this.money = Math.max(0, this.money - compensation);
+      gameAudio.playBuzzer();
+      cust.speech = '😡 Sao vô cớ nghi ngờ tôi là kẻ trộm?! 1 sao!';
+      cust.speechTimer = 3.5;
+      cust.satisfaction = 0;
+      cust.state = 'leaving';
+      cust.targetX = 20;
+      cust.targetY = (this.canvas ? this.canvas.height : 400) * 0.85;
+
+      this.addFloatingText(`⚠️ KHÁM XÉT NHẦM -${this.formatCurrency(compensation)}`, cust.x, cust.y - 30, '#ef4444');
+      this.log(`⚠️ BẠN ĐÃ KHÁM XÉT NHẦM KHÁCH HÀNG VÔ TỘI (${cust.archetype?.name || 'Khách'})! Cửa hàng phải bồi thường ${this.formatCurrency(compensation)} voucher và trừ 6 uy tín!`);
+      this.updateStatsUI();
+    }
   }
 
   updateStoreHygiene(dt) {
@@ -1274,6 +1686,12 @@ class ShopkeeperGame {
     }
 
     this.recalculateShelfPositions();
+    if (this.shop3D && this.shop3D.rebuildShelves) {
+      this.shop3D.rebuildShelves();
+    }
+    if (this.shop3D && this.shop3D.updateSecurityFixtures) {
+      this.shop3D.updateSecurityFixtures();
+    }
     gameAudio.playUpgrade();
     this.log(`🏗️ Đã trang bị nâng cấp thành công: ${upg.name}!`);
     this.updateAllUI();
@@ -1547,6 +1965,20 @@ class ShopkeeperGame {
       color: color || '#fbbf24',
       life: 1.2
     });
+
+    const overlay = document.getElementById('canvas-overlay-container');
+    if (overlay) {
+      const el = document.createElement('div');
+      el.className = 'floating-text';
+      el.innerText = text;
+      el.style.color = color || '#fbbf24';
+      const posX = (x && this.canvas && this.canvas.width) ? (x / this.canvas.width) * 100 : 50;
+      const posY = (y && this.canvas && this.canvas.height) ? (y / this.canvas.height) * 100 : 50;
+      el.style.left = `${Math.min(85, Math.max(15, posX))}%`;
+      el.style.top = `${Math.min(85, Math.max(15, posY))}%`;
+      overlay.appendChild(el);
+      setTimeout(() => el.remove(), 1200);
+    }
   }
 
   // UI UPDATES & DOM EVENT BINDINGS
@@ -1653,20 +2085,12 @@ class ShopkeeperGame {
           }
         }
 
-        // Check thief
+        // Check customers (Search suspected shoplifter / interact)
         for (let cust of this.customers) {
-          if (cust.archetype.type === 'thief' && cust.state !== 'leaving') {
+          if (cust.state !== 'leaving') {
             const dist = Math.sqrt((clickX - cust.x)**2 + (clickY - cust.y)**2);
-            if (dist <= 25) {
-              cust.state = 'leaving';
-              cust.speech = '😫 Bị tóm rồi!';
-              cust.speechTimer = 2.5;
-              this.reputation = Math.min(100, this.reputation + 4);
-              this.money += 30000;
-              gameAudio.playUpgrade();
-              this.addFloatingText('🎯 BẮT TRỘM +30.000₫', cust.x, cust.y - 20, '#fbbf24');
-              this.log('🎯 Bạn đã nhanh tay tóm gọn tên trộm và được thưởng 30.000₫!');
-              this.updateStatsUI();
+            if (dist <= 26) {
+              this.interactWithCustomer(cust);
               return;
             }
           }
@@ -1752,6 +2176,75 @@ class ShopkeeperGame {
         }
       };
     }
+
+    // QTE Emergency Anti-Dasher Buttons
+    const btnQteSlam = document.getElementById('btn-qte-slam-door');
+    if (btnQteSlam) {
+      btnQteSlam.onclick = () => this.handleQTESuccess('door');
+    }
+    const btnQteBroom = document.getElementById('btn-qte-throw-broom');
+    if (btnQteBroom) {
+      btnQteBroom.onclick = () => this.handleQTESuccess('broom');
+    }
+
+    // Spacebar listener for QTE Door Slam
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && this.activeQTE) {
+        e.preventDefault();
+        this.handleQTESuccess('door');
+      }
+    });
+
+    // Scammer Fraud Check Modal Buttons
+    const btnScammerReject = document.getElementById('btn-scammer-reject');
+    if (btnScammerReject) {
+      btnScammerReject.onclick = () => this.handleScammerReject();
+    }
+    const btnScammerAccept = document.getElementById('btn-scammer-accept');
+    if (btnScammerAccept) {
+      btnScammerAccept.onclick = () => this.handleScammerAccept();
+    }
+
+    // Save / Load Manager Modal bindings
+    const btnHeaderSaveFile = document.getElementById('btn-header-save-file');
+    if (btnHeaderSaveFile) {
+      btnHeaderSaveFile.onclick = () => this.openSaveManagerModal();
+    }
+
+    const btnCloseSaveModal = document.getElementById('btn-close-save-modal');
+    if (btnCloseSaveModal) {
+      btnCloseSaveModal.onclick = () => {
+        const modal = document.getElementById('modal-save-manager');
+        if (modal) modal.classList.add('hidden');
+      };
+    }
+
+    const btnModalExport = document.getElementById('btn-modal-export');
+    if (btnModalExport) {
+      btnModalExport.onclick = () => this.exportSaveFile();
+    }
+
+    const dropZone = document.getElementById('drop-zone-save');
+    const modalFileInput = document.getElementById('file-input-save-modal');
+    if (dropZone && modalFileInput) {
+      dropZone.onclick = () => modalFileInput.click();
+      modalFileInput.onchange = (e) => this.importSaveFile(e);
+
+      dropZone.ondragover = (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+      };
+      dropZone.ondragleave = () => {
+        dropZone.classList.remove('drag-over');
+      };
+      dropZone.ondrop = (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          this.importSaveFile({ target: { files: e.dataTransfer.files } });
+        }
+      };
+    }
   }
 
   toggleStoreStatus(forceOpen = null) {
@@ -1808,6 +2301,10 @@ class ShopkeeperGame {
     this.renderStaffTab();
     this.renderMarketingTab();
     this.renderFinanceTab();
+
+    if (this.shop3D && this.shop3D.refreshAllShelfLabels) {
+      this.shop3D.refreshAllShelfLabels();
+    }
   }
 
   updateStatsUI() {
@@ -2202,30 +2699,67 @@ class ShopkeeperGame {
     }
   }
 
+  openSaveManagerModal() {
+    const modal = document.getElementById('modal-save-manager');
+    if (!modal) return;
+    gameAudio.playClick();
+
+    // Populate current save stats
+    const nameEl = document.getElementById('save-info-name');
+    const dayTimeEl = document.getElementById('save-info-day-time');
+    const moneyEl = document.getElementById('save-info-money');
+    const repEl = document.getElementById('save-info-rep');
+
+    const hours = Math.floor(this.timeMinutes / 60);
+    const mins = Math.floor(this.timeMinutes % 60);
+    const timeFormatted = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+
+    if (nameEl) nameEl.innerText = this.storeName;
+    if (dayTimeEl) dayTimeEl.innerText = `Ngày ${this.day} • ${timeFormatted}`;
+    if (moneyEl) moneyEl.innerText = this.formatCurrency(this.money);
+    if (repEl) repEl.innerText = `${Math.round(this.reputation)}⭐ • ${this.shelves.length} Kệ hàng`;
+
+    modal.classList.remove('hidden');
+  }
+
   exportSaveFile() {
-    this.saveGame();
+    this.saveGame(false);
     const raw = localStorage.getItem('shopkeeper_save');
+    if (!raw) return;
     const blob = new Blob([raw], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `shopkeeper_save_day_${this.day}.json`;
+    const safeName = (this.storeName || 'Tiem_Tap_Hoa').replace(/[\s\/\\?%*:|"<>]+/g, '_');
+    const filename = `${safeName}_Ngay_${this.day}.json`;
+    a.download = filename;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    gameAudio.playUpgrade();
+    this.showToast(`📥 Đã tải file lưu [${filename}] về máy!`, 'success');
+    this.log(`📤 Bạn đã xuất file lưu tiến trình: ${filename}`);
   }
 
   importSaveFile(e) {
-    const file = e.target.files[0];
+    const file = e.target && e.target.files ? e.target.files[0] : null;
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target.result);
+        if (!json || typeof json !== 'object' || json.money === undefined) {
+          throw new Error('Dữ liệu không đúng định dạng của game');
+        }
         localStorage.setItem('shopkeeper_save', JSON.stringify(json));
-        alert('Đã nhập dữ liệu lưu thành công! Game sẽ được tải lại.');
+        gameAudio.playUpgrade();
+        alert(`🎉 NẠP TIẾN TRÌNH THÀNH CÔNG!\n\n🏪 Tiệm: ${json.storeName || 'Tiệm Tạp Hóa'}\n📅 Ngày chơi: Ngày ${json.day || 1}\n💵 Ngân quỹ: ${(json.money || 0).toLocaleString('vi-VN')}₫\n⭐ Uy tín: ${Math.round(json.reputation || 50)}/100\n\nGame sẽ tải lại để bạn tiếp tục chơi ngay bây giờ!`);
         window.location.reload();
       } catch (err) {
-        alert('File save không hợp lệ!');
+        gameAudio.playBuzzer();
+        alert(`⚠️ File lưu không hợp lệ! Vui lòng chọn đúng file .json đã xuất từ game.\nChi tiết lỗi: ${err.message}`);
       }
     };
     reader.readAsText(file);

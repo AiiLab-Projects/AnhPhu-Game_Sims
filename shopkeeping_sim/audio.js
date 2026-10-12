@@ -217,6 +217,83 @@ class SoundController {
     osc.start(now);
     osc.stop(now + 0.25);
   }
+
+  playAlarm() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // Siren alternating 880Hz and 660Hz
+    for (let i = 0; i < 4; i++) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      const f = (i % 2 === 0) ? 960 : 720;
+      osc.frequency.setValueAtTime(f, now + i * 0.12);
+      gain.gain.setValueAtTime(0.15, now + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + (i + 1) * 0.12);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now + i * 0.12);
+      osc.stop(now + (i + 1) * 0.12);
+    }
+  }
+
+  playDogBark() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // Double bark
+    [0, 0.14].forEach(offset => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, now + offset);
+      osc.frequency.exponentialRampToValueAtTime(140, now + offset + 0.1);
+      gain.gain.setValueAtTime(0.2, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.12);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.12);
+    });
+  }
+
+  playTackle() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.28);
+  }
+
+  playBuzzer() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, now);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  }
 }
 
 const gameAudio = new SoundController();

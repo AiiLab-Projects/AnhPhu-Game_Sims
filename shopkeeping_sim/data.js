@@ -273,13 +273,62 @@ const CUSTOMER_TYPES = [
     tipRange: [15000, 50000]
   },
   {
-    type: 'thief',
-    name: 'Kẻ trộm vặt',
-    emoji: '🥷',
+    type: 'the_shoplifter',
+    name: 'Kẻ Trộm Giấu Đồ',
+    emoji: '🧥',
+    color: '#f43f5e',
+    isSpecial: true,
+    subType: 'shoplifter',
+    speed: 0.9,
+    patience: 16,
+    tipChance: 0,
+    tipRange: [0, 0]
+  },
+  {
+    type: 'the_dasher',
+    name: 'Khách Chạy Làng (Dasher)',
+    emoji: '🏃‍♂️',
     color: '#ef4444',
     isSpecial: true,
-    speed: 1.6,
-    patience: 10,
+    subType: 'dasher',
+    speed: 2.6,
+    patience: 8,
+    tipChance: 0,
+    tipRange: [0, 0]
+  },
+  {
+    type: 'the_scammer',
+    name: 'Kẻ Tráo Tem / Tiền Giả',
+    emoji: '🕵️',
+    color: '#a855f7',
+    isSpecial: true,
+    subType: 'scammer',
+    speed: 1.1,
+    patience: 20,
+    tipChance: 0,
+    tipRange: [0, 0]
+  },
+  {
+    type: 'distraction_bait',
+    name: 'Kẻ Dàn Cảnh (Gây Rối)',
+    emoji: '🎭',
+    color: '#eab308',
+    isSpecial: true,
+    subType: 'distraction_bait',
+    speed: 1.0,
+    patience: 15,
+    tipChance: 0,
+    tipRange: [0, 0]
+  },
+  {
+    type: 'distraction_thief',
+    name: 'Kẻ Trộm Đi Kèm (Dàn Cảnh)',
+    emoji: '🥷',
+    color: '#dc2626',
+    isSpecial: true,
+    subType: 'distraction_thief',
+    speed: 1.5,
+    patience: 12,
     tipChance: 0,
     tipRange: [0, 0]
   }
@@ -378,14 +427,64 @@ const STORE_UPGRADES = [
     effect: '+50% tỷ lệ khách boa Tip & Tăng gấp đôi tiền Tip'
   },
   {
+    id: 'convex_mirror',
+    name: 'Gương Cầu Lồi & Camera Góc Rộng',
+    category: 'security',
+    icon: '🔍',
+    cost: 450000,
+    requiredLevel: 1,
+    description: 'Gương cầu lồi gắn góc trần giúp phát hiện kẻ trộm vặt giấu đồ: hiện biểu tượng (!) cảnh báo đỏ trên đầu nghi phạm!',
+    effect: 'Hiện dấu (!) khi kẻ trộm chuẩn bị giấu đồ'
+  },
+  {
+    id: 'emergency_door_lock',
+    name: 'Cửa Cuốn Khóa Khẩn Cấp (Anti-Dasher)',
+    category: 'security',
+    icon: '🚨',
+    cost: 750000,
+    requiredLevel: 2,
+    description: 'Trang bị chốt khóa điện từ tự động sập khi có khách chạy làng, tăng thời gian phản xạ QTE lên 5 giây!',
+    effect: 'Làm chậm kẻ chạy làng & Tăng QTE lên 5s'
+  },
+  {
+    id: 'barcode_scanner_ai',
+    name: 'Máy Quét Mã AI Chống Gian Lận',
+    category: 'security',
+    icon: '🤖',
+    cost: 900000,
+    requiredLevel: 2,
+    description: 'Hệ thống tự động soi phát hiện tem tráo sai giá và tiền giả tại quầy thu ngân, báo động tức thì!',
+    effect: 'Tự động bắt quả tang tráo tem & tiền giả'
+  },
+  {
+    id: 'security_gates',
+    name: 'Cổng Từ An Ninh Cảm Biến Cửa',
+    category: 'security',
+    icon: '🚧',
+    cost: 1500000,
+    requiredLevel: 2,
+    description: 'Cặp cổng từ an ninh tại cửa kính, tự động chớp đèn đỏ và hú còi inh ỏi khi hàng chưa thanh toán đi qua.',
+    effect: 'Còi báo động đỏ khi có hàng chưa trả tiền qua cửa'
+  },
+  {
+    id: 'shop_dog',
+    name: 'Chú Chó Giữ Tiệm "Vàng"',
+    category: 'security',
+    icon: '🐕',
+    cost: 1800000,
+    requiredLevel: 2,
+    description: 'Chú chó trung thành nằm canh trước hiên tiệm, sủa "Gâu gâu!" chỉ điểm kẻ lừa đảo và giảm 50% tỉ lệ trộm ghé thăm.',
+    effect: 'Giảm 50% trộm & Sủa báo hiệu kẻ lừa đảo'
+  },
+  {
     id: 'cctv_security',
-    name: 'Hệ Thống Camera & Báo Động',
+    name: 'Hệ Thống CCTV AI Cao Cấp',
     category: 'security',
     icon: '📹',
-    cost: 800000,
-    requiredLevel: 2,
-    description: 'Tự động phát hiện kẻ trộm vặt và cảnh báo tức thì, tăng độ uy tín an ninh.',
-    effect: 'Báo động trộm tự động & +10 Uy tín'
+    cost: 2500000,
+    requiredLevel: 3,
+    description: 'Mạng lưới camera giám sát AI thông minh toàn tiệm, phối hợp cùng bảo vệ bắt trộm tự động 100%.',
+    effect: 'Hỗ trợ bảo vệ tóm trộm tự động & +15 Uy tín'
   }
 ];
 

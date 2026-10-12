@@ -63,6 +63,7 @@
         <button id="btn-speed-3" class="btn-ctrl" title="Tốc độ 3x">3x</button>
         <button id="btn-audio-toggle" class="btn-ctrl" title="Bật/Tắt âm thanh">🔊</button>
         <button id="btn-quick-save" class="btn-ctrl btn-save-quick" title="Lưu game ngay lập tức">💾 Lưu</button>
+        <button id="btn-header-save-file" class="btn-ctrl btn-save-file" title="Xuất / Nhập file save để chơi tiếp">📁 File Save</button>
       </div>
     </header>
 
@@ -103,6 +104,51 @@
               <div class="closed-action-buttons">
                 <button id="btn-overlay-reopen" class="btn-primary-small">🟢 Mở Cửa Đón Khách</button>
                 <button id="btn-overlay-endday" class="btn-secondary-small">🌙 Kết Thúc Ngày Sớm</button>
+              </div>
+          <!-- QTE EMERGENCY DOOR SLAM (ANTI-DASHER) -->
+          <div id="qte-dasher-overlay" class="qte-overlay hidden">
+            <div class="qte-card">
+              <div class="qte-header">
+                <span class="qte-alert-icon">🚨</span>
+                <div>
+                  <h3 class="qte-title">BÁO ĐỘNG: KHÁCH ĐANG CHẠY LÀNG!</h3>
+                  <p class="qte-subtitle">Tên trộm vừa cướp món hàng và đang phi nước đại ra cửa!</p>
+                </div>
+              </div>
+              <div class="qte-timer-bar-container">
+                <div id="qte-timer-bar" class="qte-timer-bar"></div>
+              </div>
+              <div class="qte-actions">
+                <button id="btn-qte-slam-door" class="btn-qte-primary">
+                  🚪 ĐÓNG CỬA SẬP KHẨN CẤP <span class="qte-key-hint">[SPACE]</span>
+                </button>
+                <button id="btn-qte-throw-broom" class="btn-qte-secondary">
+                  🧹 Ném Chổi Ngáng Chân
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCAMMER VERIFICATION POPUP (POS FRAUD CHECK) -->
+          <div id="scammer-modal-overlay" class="scammer-overlay hidden">
+            <div class="scammer-card">
+              <div class="scammer-header">
+                <span class="scammer-icon">🕵️</span>
+                <div>
+                  <h3 class="scammer-title">NGHI VẤN GIAN LẬN THANH TOÁN!</h3>
+                  <p id="scammer-reason-text">Tem giá bị tráo hoặc khách cố tình đưa tiền giả!</p>
+                </div>
+              </div>
+              <div class="scammer-details" id="scammer-details-content">
+                <!-- dynamic comparison details -->
+              </div>
+              <div class="scammer-actions">
+                <button id="btn-scammer-reject" class="btn-scammer-danger">
+                  🚨 BẮT QUẢ TANG & TỪ CHỐI
+                </button>
+                <button id="btn-scammer-accept" class="btn-scammer-secondary">
+                  ✓ Bỏ Qua Cho Khách
+                </button>
               </div>
             </div>
           </div>
@@ -392,12 +438,88 @@
     </div>
   </div>
 
+  <!-- MODAL: SAVE / LOAD GAME MANAGER -->
+  <div id="modal-save-manager" class="modal-backdrop hidden">
+    <div class="modal-card save-manager-modal">
+      <div class="modal-header">
+        <div class="save-title-icon">💾</div>
+        <div>
+          <h2>Quản Lý Lưu & Tải Tiến Trình Game</h2>
+          <p class="save-modal-subtitle">Tải file lưu (.json) về máy tính hoặc nạp file để tiếp tục chơi bất cứ lúc nào</p>
+        </div>
+        <button id="btn-close-save-modal" class="btn-close-modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Current Save Status Card -->
+        <div class="current-save-card">
+          <div class="save-stat-item">
+            <span class="save-stat-label">Cửa hàng:</span>
+            <span id="save-info-name" class="save-stat-val text-cyan">Tiệm Tạp Hóa</span>
+          </div>
+          <div class="save-stat-item">
+            <span class="save-stat-label">Tiến trình:</span>
+            <span id="save-info-day-time" class="save-stat-val text-orange">Ngày 1 - 08:00</span>
+          </div>
+          <div class="save-stat-item">
+            <span class="save-stat-label">Ngân quỹ:</span>
+            <span id="save-info-money" class="save-stat-val text-gold">500.000 ₫</span>
+          </div>
+          <div class="save-stat-item">
+            <span class="save-stat-label">Uy tín & Kệ hàng:</span>
+            <span id="save-info-rep" class="save-stat-val text-green">50⭐ • 3 Kệ</span>
+          </div>
+        </div>
+
+        <!-- Action Grid: Export (Save) vs Import (Load) -->
+        <div class="save-actions-grid">
+          <!-- 1. Export File -->
+          <div class="save-action-card">
+            <div class="action-card-header">
+              <span class="action-icon">📤</span>
+              <div>
+                <h4>Xuất File Save Về Máy</h4>
+                <p>Tải toàn bộ tiến trình hiện tại thành file <code>.json</code> để lưu trữ an toàn</p>
+              </div>
+            </div>
+            <button id="btn-modal-export" class="btn-save-action export-btn">
+              📥 Tải File Save Về Máy (.json)
+            </button>
+          </div>
+
+          <!-- 2. Import File -->
+          <div class="save-action-card">
+            <div class="action-card-header">
+              <span class="action-icon">📥</span>
+              <div>
+                <h4>Nạp File Save Để Chơi Tiếp</h4>
+                <p>Chọn file <code>.json</code> từ máy tính hoặc kéo thả vào khung bên dưới</p>
+              </div>
+            </div>
+            <div id="drop-zone-save" class="drop-zone-box">
+              <span class="drop-zone-icon">📁</span>
+              <span class="drop-zone-text">Bấm chọn file hoặc Kéo & Thả file <b>.json</b> vào đây</span>
+              <input type="file" id="file-input-save-modal" accept=".json" class="hidden">
+            </div>
+          </div>
+        </div>
+
+        <div class="save-tips-box">
+          💡 <b>Mẹo:</b> File save chứa 100% dữ liệu (tiền mặt, kho hàng, nâng cấp an ninh, nhân viên đã thuê, camera 3D). Bạn có thể copy file này sang máy tính khác hoặc trình duyệt khác để chơi tiếp mà không sợ mất!
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- HIDDEN FILE INPUT FOR IMPORT -->
   <input type="file" id="file-input-save" accept=".json" style="display: none;">
 
   <!-- SCRIPTS -->
+  <script src="lib/three.min.js"></script>
+  <script src="lib/OrbitControls.js"></script>
   <script src="audio.js"></script>
   <script src="data.js"></script>
+  <script src="shop3d.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
