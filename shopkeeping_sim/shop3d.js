@@ -766,13 +766,129 @@ class Shop3D {
     gfTex.repeat.set(3, 8);
     gfTex.needsUpdate = true;
     this.textures.glassFacade = gfTex;
+
+    // 20. Water Park Cyan Mosaic Swimming Pool Tile
+    const wpCanvas = document.createElement('canvas');
+    wpCanvas.width = 512;
+    wpCanvas.height = 512;
+    const wpCtx = wpCanvas.getContext('2d');
+    wpCtx.fillStyle = '#0284c7';
+    wpCtx.fillRect(0, 0, 512, 512);
+
+    const mTile = 32;
+    const mosaicColors = ['#06b6d4', '#0891b2', '#0284c7', '#38bdf8', '#0e7490'];
+    for (let y = 0; y < 512; y += mTile) {
+      for (let x = 0; x < 512; x += mTile) {
+        const cIdx = Math.floor((Math.sin(x * 12.3 + y * 7.7) * 0.5 + 0.5) * mosaicColors.length);
+        wpCtx.fillStyle = mosaicColors[cIdx % mosaicColors.length];
+        wpCtx.fillRect(x + 1, y + 1, mTile - 2, mTile - 2);
+        wpCtx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        wpCtx.lineWidth = 1;
+        wpCtx.strokeRect(x + 1, y + 1, mTile - 2, mTile - 2);
+      }
+    }
+    const wpTex = new THREE.CanvasTexture(wpCanvas);
+    wpTex.wrapS = THREE.RepeatWrapping;
+    wpTex.wrapT = THREE.RepeatWrapping;
+    wpTex.repeat.set(6, 6);
+    wpTex.needsUpdate = true;
+    this.textures.waterParkTile = wpTex;
+
+    // 21. Basketball Court Standard Regulation Flooring
+    const bbCanvas = document.createElement('canvas');
+    bbCanvas.width = 512;
+    bbCanvas.height = 256;
+    const bbCtx = bbCanvas.getContext('2d');
+    // Navy blue court border & surround
+    bbCtx.fillStyle = '#1e3a8a';
+    bbCtx.fillRect(0, 0, 512, 256);
+    // Terracotta key / playing area
+    bbCtx.fillStyle = '#c2410c';
+    bbCtx.fillRect(20, 20, 472, 216);
+
+    // Court Lines (White)
+    bbCtx.strokeStyle = '#ffffff';
+    bbCtx.lineWidth = 4;
+    // Outer boundary
+    bbCtx.strokeRect(20, 20, 472, 216);
+    // Center half-court line
+    bbCtx.beginPath();
+    bbCtx.moveTo(256, 20);
+    bbCtx.lineTo(256, 236);
+    bbCtx.stroke();
+    // Center circle
+    bbCtx.beginPath();
+    bbCtx.arc(256, 128, 40, 0, Math.PI * 2);
+    bbCtx.stroke();
+    // Left key & 3-point arc
+    bbCtx.strokeRect(20, 84, 80, 88);
+    bbCtx.beginPath();
+    bbCtx.arc(20, 128, 100, -Math.PI / 2.3, Math.PI / 2.3);
+    bbCtx.stroke();
+    // Right key & 3-point arc
+    bbCtx.strokeRect(412, 84, 80, 88);
+    bbCtx.beginPath();
+    bbCtx.arc(492, 128, 100, Math.PI - Math.PI / 2.3, Math.PI + Math.PI / 2.3);
+    bbCtx.stroke();
+
+    const bbTex = new THREE.CanvasTexture(bbCanvas);
+    bbTex.needsUpdate = true;
+    this.textures.basketballCourt = bbTex;
+
+    // 22. Water Park Entrance Signboard
+    const wsCanvas = document.createElement('canvas');
+    wsCanvas.width = 512;
+    wsCanvas.height = 128;
+    const wsCtx = wsCanvas.getContext('2d');
+    const wsGrad = wsCtx.createLinearGradient(0, 0, 512, 128);
+    wsGrad.addColorStop(0, '#06b6d4');
+    wsGrad.addColorStop(1, '#0284c7');
+    wsCtx.fillStyle = wsGrad;
+    wsCtx.fillRect(0, 0, 512, 128);
+    wsCtx.strokeStyle = '#ffffff';
+    wsCtx.lineWidth = 6;
+    wsCtx.strokeRect(8, 8, 496, 112);
+    wsCtx.fillStyle = '#ffffff';
+    wsCtx.font = '900 40px "Outfit", sans-serif';
+    wsCtx.textAlign = 'center';
+    wsCtx.fillText('🏊 CÔNG VIÊN NƯỚC', 256, 60);
+    wsCtx.fillStyle = '#fef08a';
+    wsCtx.font = 'bold 22px "Nunito", sans-serif';
+    wsCtx.fillText('AQUA WONDERLAND • HỒ TẠO SÓNG & MÁNG TRƯỢT', 256, 98);
+    const wsTex = new THREE.CanvasTexture(wsCanvas);
+    wsTex.needsUpdate = true;
+    this.textures.waterParkSign = wsTex;
+
+    // 23. Dry Theme Park Entrance Signboard
+    const dsCanvas = document.createElement('canvas');
+    dsCanvas.width = 512;
+    dsCanvas.height = 128;
+    const dsCtx = dsCanvas.getContext('2d');
+    const dsGrad = dsCtx.createLinearGradient(0, 0, 512, 128);
+    dsGrad.addColorStop(0, '#f59e0b');
+    dsGrad.addColorStop(1, '#d97706');
+    dsCtx.fillStyle = dsGrad;
+    dsCtx.fillRect(0, 0, 512, 128);
+    dsCtx.strokeStyle = '#fef08a';
+    dsCtx.lineWidth = 6;
+    dsCtx.strokeRect(8, 8, 496, 112);
+    dsCtx.fillStyle = '#ffffff';
+    dsCtx.font = '900 38px "Outfit", sans-serif';
+    dsCtx.textAlign = 'center';
+    dsCtx.fillText('🎡 CÔNG VIÊN GIẢI TRÍ & THỂ THAO', 256, 58);
+    dsCtx.fillStyle = '#fef08a';
+    dsCtx.font = 'bold 22px "Nunito", sans-serif';
+    dsCtx.fillText('ĐU QUAY KHỔNG LỒ • SÂN BÓNG RỔ • KHU TRÒ CHƠI', 256, 98);
+    const dsTex = new THREE.CanvasTexture(dsCanvas);
+    dsTex.needsUpdate = true;
+    this.textures.dryParkSign = dsTex;
   }
 
   setupScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#0b1120');
     // Panoramic city depth with scenic atmosphere
-    this.scene.fog = new THREE.Fog('#0b1120', 45, 230);
+    this.scene.fog = new THREE.Fog('#0b1120', 65, 360);
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -795,7 +911,7 @@ class Shop3D {
     const aspect = this.container.clientWidth / this.container.clientHeight;
 
     // 1. Isometric / Management Camera (Top-down tilted with full city panoramic range)
-    this.isoCamera = new THREE.PerspectiveCamera(45, aspect, 0.5, 450);
+    this.isoCamera = new THREE.PerspectiveCamera(45, aspect, 0.5, 650);
     this.isoCamera.position.set(0, 18, 19);
     this.isoCamera.lookAt(0, 1.2, 0);
 
@@ -806,12 +922,12 @@ class Shop3D {
       this.controls.dampingFactor = 0.08;
       this.controls.maxPolarAngle = Math.PI / 2.05;
       this.controls.minDistance = 5;
-      this.controls.maxDistance = 160; // Extended zoom to view entire city, river, tunnel & lake
+      this.controls.maxDistance = 240; // Extended zoom to view entire megacity, river, tunnel, lake and both parks
       this.controls.target.set(0, 1.2, 0);
     }
 
     // 2. First-Person FPS Camera
-    this.fpsCamera = new THREE.PerspectiveCamera(72, aspect, 0.1, 350);
+    this.fpsCamera = new THREE.PerspectiveCamera(72, aspect, 0.1, 480);
     this.fpsCamera.position.copy(this.player.pos);
     this.fpsCamera.lookAt(0, 1.65, -5);
 
@@ -824,15 +940,15 @@ class Shop3D {
     const ambient = new THREE.AmbientLight(0xfff6ea, 0.78);
     this.scene.add(ambient);
 
-    // Directional Sunlight covering entire expansive city, river, bridge, tunnel and lake
+    // Directional Sunlight covering entire expansive megacity, river, bridge, tunnel, lake and both parks
     const sunLight = new THREE.DirectionalLight(0xffffff, 0.88);
-    sunLight.position.set(15, 36, 25);
+    sunLight.position.set(20, 48, 35);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 1024;
     sunLight.shadow.mapSize.height = 1024;
     sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 180;
-    const d = 75;
+    sunLight.shadow.camera.far = 280;
+    const d = 110;
     sunLight.shadow.camera.left = -d;
     sunLight.shadow.camera.right = d;
     sunLight.shadow.camera.top = d;
@@ -1567,23 +1683,23 @@ class Shop3D {
     curb.position.set(-3.5, 0.05, frontZ + 8);
     this.streetGroup.add(curb);
 
-    // 2. Asphalt Highway Avenue (Z: 17.0 -> 33.0, width 148m from X = -85 to +63)
-    const roadGeo = new THREE.PlaneGeometry(148, 16);
+    // 2. Asphalt Highway Avenue (Z: 17.0 -> 33.0, width 175m from X = -95 to +80)
+    const roadGeo = new THREE.PlaneGeometry(175, 16);
     const roadMat = new THREE.MeshStandardMaterial({
       map: this.textures.road,
       roughness: 0.85
     });
     const road = new THREE.Mesh(roadGeo, roadMat);
     road.rotation.x = -Math.PI / 2;
-    road.position.set(-11, -0.06, frontZ + 16);
+    road.position.set(-7.5, -0.06, frontZ + 16);
     road.receiveShadow = true;
     this.streetGroup.add(road);
 
-    // 3. Opposite North Sidewalk (Z: 33.0 -> 38.0, width 148m from X = -85 to +63)
-    const oppSwGeo = new THREE.PlaneGeometry(148, 5);
+    // 3. Opposite North Sidewalk (Z: 33.0 -> 38.0, width 175m from X = -95 to +80)
+    const oppSwGeo = new THREE.PlaneGeometry(175, 5);
     const oppSw = new THREE.Mesh(oppSwGeo, swMat);
     oppSw.rotation.x = -Math.PI / 2;
-    oppSw.position.set(-11, 0.01, frontZ + 25.5);
+    oppSw.position.set(-7.5, 0.01, frontZ + 25.5);
     oppSw.receiveShadow = true;
     this.streetGroup.add(oppSw);
 
@@ -1632,10 +1748,16 @@ class Shop3D {
     // 18. Khu Đô Thị Cao Ốc Phía Đông (East Modern High-Rise District: X in [15, 62])
     this.createEastDistrict(frontZ);
 
-    // 19. Animated Traffic Cars across Road, Bridge & Mountain Tunnel
+    // 19. Công Viên Khô - Giải Trí & Thể Thao (Dry Theme & Sports Park: X in [14, 68], Z in [72, 118])
+    this.createDryThemePark();
+
+    // 20. Công Viên Nước - Aqua Wonderland (Water Resort & Wave Park: X in [-48, 10], Z in [72, 118])
+    this.createWaterPark();
+
+    // 21. Animated Traffic Cars across Road, Bridge & Mountain Tunnel
     this.initStreetTraffic(frontZ + 16);
 
-    // 20. Pedestrians on Sidewalk & Bridge
+    // 22. Pedestrians on Sidewalk & Bridge
     this.initSidewalkPedestrians(frontZ + 5.0);
 
     this.scene.add(this.streetGroup);
@@ -2907,14 +3029,16 @@ class Shop3D {
       }
     });
 
-    // 3. Distant City Skyline Silhouettes (Cao ốc chọc trời hậu cảnh)
-    const skylineZ = 85.0;
+    // 3. Distant City Megacity Skyline Silhouettes (Cao ốc chọc trời hậu cảnh siêu rộng)
+    const skylineZ = 138.0;
     const skylineSpecs = [
-      { x: -35, w: 14, h: 38, d: 10, color: 0x0f172a },
-      { x: -18, w: 12, h: 46, d: 10, color: 0x1e293b },
-      { x: 0, w: 16, h: 52, d: 12, color: 0x0f172a },
-      { x: 18, w: 12, h: 42, d: 10, color: 0x1e293b },
-      { x: 35, w: 15, h: 36, d: 10, color: 0x0f172a }
+      { x: -65, w: 18, h: 48, d: 12, color: 0x0f172a },
+      { x: -45, w: 16, h: 56, d: 12, color: 0x1e293b },
+      { x: -24, w: 18, h: 65, d: 14, color: 0x0f172a },
+      { x: 0, w: 22, h: 72, d: 15, color: 0x1e293b },
+      { x: 26, w: 18, h: 62, d: 14, color: 0x0f172a },
+      { x: 48, w: 16, h: 54, d: 12, color: 0x1e293b },
+      { x: 68, w: 18, h: 46, d: 12, color: 0x0f172a }
     ];
     skylineSpecs.forEach(sky => {
       const skyMesh = new THREE.Mesh(
@@ -3475,21 +3599,728 @@ class Shop3D {
     this.streetGroup.add(eastGroup);
   }
 
+  // 19. CÔNG VIÊN KHÔ - GIẢI TRÍ & THỂ THAO (Dry Theme & Sports Park: X in [14, 68], Z in [72, 118])
+  createDryThemePark() {
+    const dryParkGroup = new THREE.Group();
+    const parkMinX = 14.0;
+    const parkMaxX = 68.0;
+    const parkMinZ = 72.0;
+    const parkMaxZ = 118.0;
+    const parkCenterX = (parkMinX + parkMaxX) / 2; // 41.0
+    const parkCenterZ = (parkMinZ + parkMaxZ) / 2; // 95.0
+    const parkW = parkMaxX - parkMinX;             // 54m
+    const parkL = parkMaxZ - parkMinZ;             // 46m
+
+    const grassMat = new THREE.MeshStandardMaterial({ map: this.textures.parkGrass, roughness: 0.9 });
+    const paverMat = new THREE.MeshStandardMaterial({ map: this.textures.sidewalk, roughness: 0.75 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85, roughness: 0.15 });
+    const darkSteelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7 });
+    const redAccentMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 });
+    const yellowNeonMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+    const cyanNeonMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const warmLampMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+    // 1. Lush Green Park Grounds with Paver Walkways
+    const groundGeo = new THREE.PlaneGeometry(parkW, parkL);
+    const ground = new THREE.Mesh(groundGeo, grassMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(parkCenterX, -0.02, parkCenterZ);
+    ground.receiveShadow = true;
+    dryParkGroup.add(ground);
+
+    // Main Plaza Promenade Walkway (connecting entrance to Ferris wheel and sports court)
+    const walkwayGeo = new THREE.PlaneGeometry(8, parkL);
+    const walkway = new THREE.Mesh(walkwayGeo, paverMat);
+    walkway.rotation.x = -Math.PI / 2;
+    walkway.position.set(38, 0.01, parkCenterZ);
+    walkway.receiveShadow = true;
+    dryParkGroup.add(walkway);
+
+    // Cross-walkway connecting to East Ferris wheel plaza
+    const crossWalkGeo = new THREE.PlaneGeometry(24, 6);
+    const crossWalk = new THREE.Mesh(crossWalkGeo, paverMat);
+    crossWalk.rotation.x = -Math.PI / 2;
+    crossWalk.position.set(50, 0.01, 95);
+    crossWalk.receiveShadow = true;
+    dryParkGroup.add(crossWalk);
+
+    // 2. GRAND PARK ENTRANCE ARCHWAY (Cổng Chào Công Viên Khô)
+    const archGroup = new THREE.Group();
+    archGroup.position.set(38, 0, parkMinZ);
+
+    [-4.5, 4.5].forEach(cx => {
+      const pCol = new THREE.Mesh(new THREE.BoxGeometry(1.2, 6.0, 1.2), redAccentMat);
+      pCol.position.set(cx, 3.0, 0);
+      pCol.castShadow = true;
+      archGroup.add(pCol);
+
+      const pCap = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 12), yellowNeonMat);
+      pCap.position.set(cx, 6.2, 0);
+      archGroup.add(pCap);
+    });
+
+    const archBeam = new THREE.Mesh(new THREE.BoxGeometry(10.2, 1.6, 0.8), redAccentMat);
+    archBeam.position.set(0, 5.2, 0);
+    archGroup.add(archBeam);
+
+    const archSignMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(9.6, 1.4),
+      new THREE.MeshBasicMaterial({ map: this.textures.dryParkSign })
+    );
+    archSignMesh.position.set(0, 5.2, 0.42);
+    archGroup.add(archSignMesh);
+
+    dryParkGroup.add(archGroup);
+
+    // 3. COLOSSAL FERRIS WHEEL (Bánh xe đu quay khổng lồ cao 28m!)
+    const wheelCenter = new THREE.Vector3(52, 15.5, 96);
+    const wheelR = 12.0;
+
+    // A-frame support towers on North and South sides
+    [-3.2, 3.2].forEach(sz => {
+      const tower = new THREE.Group();
+      tower.position.set(wheelCenter.x, 0, wheelCenter.z + sz);
+
+      [-4.8, 4.8].forEach(lx => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.38, 16.5, 8), steelMat);
+        leg.position.set(lx * 0.5, 7.8, 0);
+        leg.rotation.z = (lx > 0) ? -0.28 : 0.28;
+        leg.castShadow = true;
+        tower.add(leg);
+      });
+
+      [4.5, 9.5].forEach(by => {
+        const brace = new THREE.Mesh(new THREE.BoxGeometry(by * 0.5 + 2.5, 0.2, 0.2), steelMat);
+        brace.position.y = by;
+        tower.add(brace);
+      });
+
+      const hubBox = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), darkSteelMat);
+      hubBox.position.set(0, 15.5, 0);
+      tower.add(hubBox);
+
+      dryParkGroup.add(tower);
+    });
+
+    // Central Axle
+    const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 6.8, 12), steelMat);
+    axle.rotation.x = Math.PI / 2;
+    axle.position.copy(wheelCenter);
+    dryParkGroup.add(axle);
+
+    // Rotating Wheel Structure
+    const wheelGroup = new THREE.Group();
+    wheelGroup.position.copy(wheelCenter);
+
+    [-1.2, 1.2].forEach(rz => {
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(wheelR, 0.12, 8, 36),
+        steelMat
+      );
+      rim.position.z = rz;
+      wheelGroup.add(rim);
+
+      const innerRim = new THREE.Mesh(
+        new THREE.TorusGeometry(wheelR * 0.65, 0.08, 8, 36),
+        steelMat
+      );
+      innerRim.position.z = rz;
+      wheelGroup.add(innerRim);
+    });
+
+    const spokeCount = 12;
+    this.ferrisGondolas = [];
+    const gondolaColors = [0xef4444, 0xf59e0b, 0x10b981, 0x06b6d4, 0x8b5cf6, 0xec4899];
+
+    for (let i = 0; i < spokeCount; i++) {
+      const ang = (i / spokeCount) * Math.PI * 2;
+      const spokeSp = new THREE.Mesh(new THREE.BoxGeometry(0.08, wheelR * 1.95, 0.08), steelMat);
+      spokeSp.rotation.z = ang;
+      wheelGroup.add(spokeSp);
+
+      const neonSp = new THREE.Mesh(new THREE.BoxGeometry(0.06, wheelR * 1.9, 0.02), (i % 2 === 0) ? cyanNeonMat : yellowNeonMat);
+      neonSp.rotation.z = ang;
+      neonSp.position.z = 1.25;
+      wheelGroup.add(neonSp);
+
+      const gx = Math.cos(ang) * wheelR;
+      const gy = Math.sin(ang) * wheelR;
+
+      const gondolaPivot = new THREE.Group();
+      gondolaPivot.position.set(gx, gy, 0);
+
+      const cColor = gondolaColors[i % gondolaColors.length];
+      const cabinMat = new THREE.MeshStandardMaterial({ color: cColor, roughness: 0.3, metalness: 0.2 });
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.5, 1.8), cabinMat);
+      cabin.position.y = -0.7;
+      cabin.castShadow = true;
+      gondolaPivot.add(cabin);
+
+      const cRoof = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 1.85, 12, 1, false, 0, Math.PI), cabinMat);
+      cRoof.rotation.z = Math.PI / 2;
+      cRoof.rotation.y = Math.PI / 2;
+      cRoof.position.y = 0.05;
+      gondolaPivot.add(cRoof);
+
+      const winMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7 });
+      [-0.92, 0.92].forEach(wz => {
+        const win = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.7), winMat);
+        win.position.set(0, -0.65, wz);
+        if (wz < 0) win.rotation.y = Math.PI;
+        gondolaPivot.add(win);
+      });
+
+      const gLight = new THREE.PointLight(0xfef08a, 0.6, 4);
+      gLight.position.set(0, -0.6, 0);
+      gondolaPivot.add(gLight);
+
+      wheelGroup.add(gondolaPivot);
+      this.ferrisGondolas.push(gondolaPivot);
+    }
+
+    const hubDisk = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 2.6, 16), steelMat);
+    hubDisk.rotation.x = Math.PI / 2;
+    wheelGroup.add(hubDisk);
+
+    const hubStar = new THREE.Mesh(new THREE.SphereGeometry(1.2, 12, 12), yellowNeonMat);
+    hubStar.position.z = 1.35;
+    wheelGroup.add(hubStar);
+
+    const wheelSpot = new THREE.PointLight(0x38bdf8, 1.8, 35, 1.3);
+    wheelSpot.position.set(0, 0, 3.5);
+    wheelGroup.add(wheelSpot);
+
+    this.ferrisWheelGroup = wheelGroup;
+    dryParkGroup.add(wheelGroup);
+
+    // 4. REGULATION BASKETBALL SPORTS COURT (Sân bóng rổ chuyên nghiệp)
+    const courtGroup = new THREE.Group();
+    const courtX = 26.0;
+    const courtZ = 85.0;
+    courtGroup.position.set(courtX, 0, courtZ);
+
+    const courtGeo = new THREE.PlaneGeometry(18, 11);
+    const courtMesh = new THREE.Mesh(
+      courtGeo,
+      new THREE.MeshStandardMaterial({ map: this.textures.basketballCourt, roughness: 0.6 })
+    );
+    courtMesh.rotation.x = -Math.PI / 2;
+    courtMesh.position.y = 0.02;
+    courtMesh.receiveShadow = true;
+    courtGroup.add(courtMesh);
+
+    [-8.2, 8.2].forEach((hx, hIdx) => {
+      const hoopPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 3.8, 8), darkSteelMat);
+      hoopPost.position.set(hx, 1.9, 0);
+      hoopPost.rotation.z = (hIdx === 0) ? -0.15 : 0.15;
+      courtGroup.add(hoopPost);
+
+      const board = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 1.2, 1.8),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, roughness: 0.1 })
+      );
+      board.position.set(hIdx === 0 ? hx + 0.6 : hx - 0.6, 3.2, 0);
+      courtGroup.add(board);
+
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.32, 0.03, 8, 16),
+        new THREE.MeshStandardMaterial({ color: 0xf97316 })
+      );
+      rim.rotation.x = Math.PI / 2;
+      rim.position.set(hIdx === 0 ? hx + 0.95 : hx - 0.95, 3.05, 0);
+      courtGroup.add(rim);
+
+      const net = new THREE.Mesh(
+        new THREE.ConeGeometry(0.3, 0.5, 8, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true })
+      );
+      net.position.set(hIdx === 0 ? hx + 0.95 : hx - 0.95, 2.78, 0);
+      courtGroup.add(net);
+    });
+
+    const fenceMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6 });
+    [-9.2, 9.2].forEach(fx => {
+      [-5.6, 5.6].forEach(fz => {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.2), fenceMat);
+        post.position.set(fx, 1.6, fz);
+        courtGroup.add(post);
+      });
+    });
+
+    [-7.0, 7.0].forEach(lx => {
+      const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 7.5, 8), darkSteelMat);
+      tower.position.set(lx, 3.75, -5.8);
+      courtGroup.add(tower);
+
+      const bank = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 0.3), warmLampMat);
+      bank.position.set(lx, 7.6, -5.6);
+      courtGroup.add(bank);
+
+      const fLight = new THREE.SpotLight(0xfffaed, 1.6, 22, Math.PI / 3, 0.4);
+      fLight.position.set(lx, 7.5, -5.6);
+      fLight.target.position.set(lx, 0, 0);
+      courtGroup.add(fLight);
+      courtGroup.add(fLight.target);
+    });
+
+    dryParkGroup.add(courtGroup);
+
+    // 5. CHILDREN'S PLAYGROUND (Khu vui chơi trẻ em với xích đu & cầu trượt)
+    const playGroup = new THREE.Group();
+    playGroup.position.set(24.0, 0, 105.0);
+
+    const swingFrameMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.12, 0.12), swingFrameMat);
+    beam.position.set(0, 3.2, 0);
+    playGroup.add(beam);
+
+    [-2.5, 2.5].forEach(ax => {
+      [-0.9, 0.9].forEach(az => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.4), swingFrameMat);
+        leg.position.set(ax, 1.6, az * 0.7);
+        leg.rotation.x = az > 0 ? 0.25 : -0.25;
+        playGroup.add(leg);
+      });
+    });
+
+    [-1.2, 1.2].forEach(sx => {
+      const ropeMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
+      [-0.3, 0.3].forEach(rx => {
+        const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 2.2), ropeMat);
+        rope.position.set(sx + rx, 2.1, 0);
+        playGroup.add(rope);
+      });
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.06, 0.35), redAccentMat);
+      seat.position.set(sx, 0.95, 0);
+      playGroup.add(seat);
+    });
+
+    const slideTower = new THREE.Group();
+    slideTower.position.set(7.5, 0, 0);
+    const platform = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.15, 2.0), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+    platform.position.y = 2.4;
+    slideTower.add(platform);
+
+    [-0.9, 0.9].forEach(px => {
+      [-0.9, 0.9].forEach(pz => {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.4), darkSteelMat);
+        post.position.set(px, 1.2, pz);
+        slideTower.add(post);
+      });
+    });
+
+    const chuteMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 });
+    const chute = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.35, 8, 20, Math.PI * 1.5), chuteMat);
+    chute.rotation.x = Math.PI / 2.3;
+    chute.position.set(1.4, 1.2, 0.5);
+    slideTower.add(chute);
+
+    playGroup.add(slideTower);
+    dryParkGroup.add(playGroup);
+
+    // 6. PARK ICE CREAM & SNACK KIOSK (`🍦 TIỆM KEM CÔNG VIÊN`)
+    const kiosk = new THREE.Group();
+    kiosk.position.set(38.0, 0, 76.0);
+
+    const kioskMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
+    const kioskRoofMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 });
+    const kBody = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.5, 2.4), kioskMat);
+    kBody.position.y = 1.25;
+    kBody.castShadow = true;
+    kiosk.add(kBody);
+
+    const kRoof = new THREE.Mesh(new THREE.ConeGeometry(2.6, 1.2, 4), kioskRoofMat);
+    kRoof.position.y = 3.1;
+    kRoof.rotation.y = Math.PI / 4;
+    kiosk.add(kRoof);
+
+    const kSignTex = new THREE.CanvasTexture((() => {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 64;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(0, 0, 256, 64);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🍦 KEM TƯƠI 3 MÀU', 128, 42);
+      return c;
+    })());
+    const kSign = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.5), new THREE.MeshBasicMaterial({ map: kSignTex }));
+    kSign.position.set(0, 2.1, 1.22);
+    kiosk.add(kSign);
+
+    const kLight = new THREE.PointLight(0xfef08a, 1.1, 6);
+    kLight.position.set(0, 2.2, 1.5);
+    kiosk.add(kLight);
+
+    const kHitbox = new THREE.Mesh(
+      new THREE.BoxGeometry(3.4, 2.4, 2.2),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    kHitbox.position.set(0, 1.2, 1.0);
+    kHitbox.userData = { type: 'dry_park_kiosk' };
+    kiosk.add(kHitbox);
+    this.interactiveObjects.push(kHitbox);
+
+    dryParkGroup.add(kiosk);
+
+    [
+      { x: 18, z: 76 }, { x: 58, z: 76 },
+      { x: 18, z: 96 }, { x: 62, z: 96 },
+      { x: 38, z: 114 }, { x: 58, z: 114 }
+    ].forEach(pos => {
+      const tree = new THREE.Group();
+      tree.position.set(pos.x, 0, pos.z);
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 3.5), new THREE.MeshStandardMaterial({ color: 0x451a03 }));
+      trunk.position.y = 1.75;
+      tree.add(trunk);
+      const crown = new THREE.Mesh(new THREE.SphereGeometry(1.6, 8, 8), new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.6 }));
+      crown.position.y = 4.0;
+      tree.add(crown);
+      dryParkGroup.add(tree);
+    });
+
+    this.streetGroup.add(dryParkGroup);
+  }
+
+  // 20. CÔNG VIÊN NƯỚC - AQUA WONDERLAND (Water Resort & Wave Park: X in [-48, 10], Z in [72, 118])
+  createWaterPark() {
+    const waterParkGroup = new THREE.Group();
+    const wpMinX = -48.0;
+    const wpMaxX = 10.0;
+    const wpMinZ = 72.0;
+    const wpMaxZ = 118.0;
+    const wpCenterX = (wpMinX + wpMaxX) / 2; // -19.0
+    const wpCenterZ = (wpMinZ + wpMaxZ) / 2; // 95.0
+    const wpW = wpMaxX - wpMinX;             // 58m
+    const wpL = wpMaxZ - wpMinZ;             // 46m
+
+    const deckTileMat = new THREE.MeshStandardMaterial({ map: this.textures.sidewalk, roughness: 0.65 });
+    const poolTileMat = new THREE.MeshStandardMaterial({ map: this.textures.waterParkTile, roughness: 0.35, metalness: 0.1 });
+    const aquaWaterMat = new THREE.MeshStandardMaterial({
+      map: this.textures.water,
+      color: 0x06b6d4,
+      roughness: 0.08,
+      metalness: 0.2,
+      transparent: true,
+      opacity: 0.86
+    });
+    const slideYellowMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.25, metalness: 0.2 });
+    const slideCyanMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.25, metalness: 0.2 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.75, roughness: 0.2 });
+    const umbrellaRedMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.6, side: THREE.DoubleSide });
+
+    // 1. Water Park Surrounding Deck Floor (White stone pavers)
+    const deckGeo = new THREE.PlaneGeometry(wpW, wpL);
+    const deck = new THREE.Mesh(deckGeo, deckTileMat);
+    deck.rotation.x = -Math.PI / 2;
+    deck.position.set(wpCenterX, -0.02, wpCenterZ);
+    deck.receiveShadow = true;
+    waterParkGroup.add(deck);
+
+    // 2. GRAND TROPICAL ENTRANCE ARCHWAY (Cổng Chào Công Viên Nước)
+    const archGroup = new THREE.Group();
+    archGroup.position.set(-18.0, 0, wpMinZ);
+
+    [-4.5, 4.5].forEach(cx => {
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 5.8, 12), new THREE.MeshStandardMaterial({ color: 0x0891b2 }));
+      col.position.set(cx, 2.9, 0);
+      col.castShadow = true;
+      archGroup.add(col);
+
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+      cap.position.set(cx, 6.0, 0);
+      archGroup.add(cap);
+    });
+
+    const aBeam = new THREE.Mesh(new THREE.BoxGeometry(10.2, 1.6, 0.6), new THREE.MeshStandardMaterial({ color: 0x0284c7 }));
+    aBeam.position.set(0, 5.2, 0);
+    archGroup.add(aBeam);
+
+    const aSign = new THREE.Mesh(
+      new THREE.PlaneGeometry(9.6, 1.4),
+      new THREE.MeshBasicMaterial({ map: this.textures.waterParkSign })
+    );
+    aSign.position.set(0, 5.2, 0.32);
+    archGroup.add(aSign);
+
+    waterParkGroup.add(archGroup);
+
+    // 3. RESORT WAVE POOL & AZURE LAGOON (Hồ Bơi Tạo Sóng: X in [-32, -4], Z in [83, 105])
+    const poolW = 28.0;
+    const poolL = 22.0;
+    const poolCenterX = -18.0;
+    const poolCenterZ = 94.0;
+    const poolDepth = 1.35;
+    const waterY = -0.15;
+
+    const basinFloorGeo = new THREE.PlaneGeometry(poolW, poolL);
+    const basinFloor = new THREE.Mesh(basinFloorGeo, poolTileMat);
+    basinFloor.rotation.x = -Math.PI / 2;
+    basinFloor.position.set(poolCenterX, -poolDepth, poolCenterZ);
+    waterParkGroup.add(basinFloor);
+
+    const wallNorth = new THREE.Mesh(new THREE.BoxGeometry(poolW, poolDepth, 0.5), poolTileMat);
+    wallNorth.position.set(poolCenterX, -poolDepth / 2, poolCenterZ + poolL / 2);
+    waterParkGroup.add(wallNorth);
+
+    const wallWest = new THREE.Mesh(new THREE.BoxGeometry(0.5, poolDepth, poolL), poolTileMat);
+    wallWest.position.set(poolCenterX - poolW / 2, -poolDepth / 2, poolCenterZ);
+    waterParkGroup.add(wallWest);
+
+    const wallEast = new THREE.Mesh(new THREE.BoxGeometry(0.5, poolDepth, poolL), poolTileMat);
+    wallEast.position.set(poolCenterX + poolW / 2, -poolDepth / 2, poolCenterZ);
+    waterParkGroup.add(wallEast);
+
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
+    const rimNorth = new THREE.Mesh(new THREE.BoxGeometry(poolW + 1.2, 0.18, 0.8), rimMat);
+    rimNorth.position.set(poolCenterX, 0.08, poolCenterZ + poolL / 2);
+    waterParkGroup.add(rimNorth);
+
+    const rimWest = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.18, poolL + 1.2), rimMat);
+    rimWest.position.set(poolCenterX - poolW / 2, 0.08, poolCenterZ);
+    waterParkGroup.add(rimWest);
+
+    const rimEast = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.18, poolL + 1.2), rimMat);
+    rimEast.position.set(poolCenterX + poolW / 2, 0.08, poolCenterZ);
+    waterParkGroup.add(rimEast);
+
+    const poolWaterGeo = new THREE.PlaneGeometry(poolW, poolL);
+    const poolWater = new THREE.Mesh(poolWaterGeo, aquaWaterMat);
+    poolWater.rotation.x = -Math.PI / 2;
+    poolWater.position.set(poolCenterX, waterY, poolCenterZ);
+    poolWater.receiveShadow = true;
+    waterParkGroup.add(poolWater);
+    this.waterSurfaces.push(poolWater);
+
+    const donutColors = [0xef4444, 0xfacc15, 0x10b981, 0x8b5cf6, 0xec4899];
+    const donutPositions = [
+      { x: -14, z: 90 }, { x: -22, z: 92 },
+      { x: -10, z: 98 }, { x: -26, z: 99 },
+      { x: -18, z: 102 }
+    ];
+    donutPositions.forEach((dp, di) => {
+      const ringMesh = new THREE.Mesh(
+        new THREE.TorusGeometry(0.65, 0.22, 10, 20),
+        new THREE.MeshStandardMaterial({ color: donutColors[di % donutColors.length], roughness: 0.25 })
+      );
+      ringMesh.rotation.x = Math.PI / 2;
+      ringMesh.position.set(dp.x, waterY + 0.08, dp.z);
+      waterParkGroup.add(ringMesh);
+    });
+
+    // 4. GIANT SPIRAL WATER SLIDES TOWER (Tháp trượt nước xoắn ốc khổng lồ cao 12m)
+    const slideTower = new THREE.Group();
+    const towerX = -38.0;
+    const towerZ = 98.0;
+    slideTower.position.set(towerX, 0, towerZ);
+
+    [-1.6, 1.6].forEach(tx => {
+      [-1.6, 1.6].forEach(tz => {
+        const col = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 12.0, 8), steelMat);
+        col.position.set(tx, 6.0, tz);
+        col.castShadow = true;
+        slideTower.add(col);
+      });
+    });
+
+    const startDeck = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.25, 4.0), rimMat);
+    startDeck.position.y = 11.0;
+    slideTower.add(startDeck);
+
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 1.6, 4), new THREE.MeshStandardMaterial({ color: 0x0284c7 }));
+    roof.position.y = 13.8;
+    roof.rotation.y = Math.PI / 4;
+    slideTower.add(roof);
+
+    const segments1 = 28;
+    for (let s = 0; s < segments1; s++) {
+      const t = s / segments1;
+      const angle = t * Math.PI * 2.8;
+      const r = 4.2 - t * 0.8;
+      const fx = Math.cos(angle) * r;
+      const fz = Math.sin(angle) * r;
+      const fy = 10.8 - t * 10.2;
+
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 1.3, 12), slideYellowMat);
+      seg.position.set(fx + 2.5, fy, fz - 2.0);
+      seg.rotation.z = 0.45;
+      seg.rotation.y = -angle;
+      seg.castShadow = true;
+      slideTower.add(seg);
+    }
+
+    const segments2 = 22;
+    for (let s = 0; s < segments2; s++) {
+      const t = s / segments2;
+      const angle = -t * Math.PI * 1.8;
+      const r = 5.2 - t * 1.2;
+      const fx = Math.cos(angle) * r;
+      const fz = Math.sin(angle) * r;
+      const fy = 9.8 - t * 9.2;
+
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 1.4, 12), slideCyanMat);
+      seg.position.set(fx + 3.0, fy, fz + 2.5);
+      seg.rotation.z = -0.4;
+      seg.rotation.y = -angle;
+      seg.castShadow = true;
+      slideTower.add(seg);
+    }
+
+    waterParkGroup.add(slideTower);
+
+    // Splashdown Plunge Pool at Slide Exit ($X = -28, Z = 88)
+    const splashGroup = new THREE.Group();
+    splashGroup.position.set(-28.0, 0, 88.0);
+
+    const splashBasin = new THREE.Mesh(
+      new THREE.BoxGeometry(6.5, 0.8, 6.5),
+      poolTileMat
+    );
+    splashBasin.position.y = -0.4;
+    splashGroup.add(splashBasin);
+
+    const splashWater = new THREE.Mesh(
+      new THREE.PlaneGeometry(6.0, 6.0),
+      aquaWaterMat
+    );
+    splashWater.rotation.x = -Math.PI / 2;
+    splashWater.position.y = waterY;
+    splashGroup.add(splashWater);
+
+    for (let wi = 0; wi < 5; wi++) {
+      const foam = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35 + wi * 0.1, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 })
+      );
+      foam.position.set((Math.random() - 0.5) * 2.2, waterY + 0.15, (Math.random() - 0.5) * 2.2);
+      splashGroup.add(foam);
+    }
+
+    const slideHitbox = new THREE.Mesh(
+      new THREE.BoxGeometry(3.6, 2.0, 3.6),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    slideHitbox.position.set(0, 0.8, 0);
+    slideHitbox.userData = { type: 'water_park_slide' };
+    splashGroup.add(slideHitbox);
+    this.interactiveObjects.push(slideHitbox);
+
+    waterParkGroup.add(splashGroup);
+
+    // 5. WATER SPRAY MUSHROOM & KIDS AQUA PLAY (Nấm Phun Nước Khổng Lồ)
+    const mushroom = new THREE.Group();
+    mushroom.position.set(-8.0, 0, 88.0);
+
+    const mStem = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 3.2, 12), new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
+    mStem.position.y = 1.6;
+    mushroom.add(mStem);
+
+    const mCap = new THREE.Mesh(
+      new THREE.ConeGeometry(2.4, 0.9, 16),
+      new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 })
+    );
+    mCap.position.y = 3.4;
+    mushroom.add(mCap);
+
+    for (let di = 0; di < 6; di++) {
+      const dang = (di / 6) * Math.PI * 2;
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      dot.position.set(Math.cos(dang) * 1.3, 3.35, Math.sin(dang) * 1.3);
+      mushroom.add(dot);
+    }
+
+    const sprayGeo = new THREE.CylinderGeometry(2.2, 2.5, 3.0, 16, 1, true);
+    const sprayMat = new THREE.MeshBasicMaterial({
+      color: 0xbae6fd,
+      transparent: true,
+      opacity: 0.35,
+      side: THREE.DoubleSide
+    });
+    const spray = new THREE.Mesh(sprayGeo, sprayMat);
+    spray.position.y = 1.6;
+    mushroom.add(spray);
+
+    waterParkGroup.add(mushroom);
+
+    // 6. RESORT SUNBED LOUNGERS & TIKI BEACH UMBRELLAS
+    const sunDeckX = 2.0;
+    const loungerMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
+
+    for (let lz = 80; lz <= 104; lz += 6.0) {
+      const lounger = new THREE.Group();
+      lounger.position.set(sunDeckX, 0, lz);
+
+      const bed = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.22, 0.85), loungerMat);
+      bed.position.set(0, 0.15, 0);
+      lounger.add(bed);
+
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.12, 0.82), loungerMat);
+      back.position.set(-0.7, 0.45, 0);
+      back.rotation.z = -0.45;
+      lounger.add(back);
+
+      waterParkGroup.add(lounger);
+
+      if (lz % 12 === 8) {
+        const umbrella = new THREE.Group();
+        umbrella.position.set(sunDeckX + 1.8, 0, lz);
+
+        const uPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.8), steelMat);
+        uPole.position.y = 1.4;
+        umbrella.add(uPole);
+
+        const uCanopy = new THREE.Mesh(new THREE.ConeGeometry(1.6, 0.65, 8), umbrellaRedMat);
+        uCanopy.position.y = 2.65;
+        umbrella.add(uCanopy);
+
+        waterParkGroup.add(umbrella);
+      }
+    }
+
+    [
+      { x: -35, z: 80 }, { x: -3, z: 78 },
+      { x: -35, z: 112 }, { x: -4, z: 112 }
+    ].forEach(pos => {
+      const palm = new THREE.Group();
+      palm.position.set(pos.x, 0, pos.z);
+
+      const pTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 4.5, 8), new THREE.MeshStandardMaterial({ color: 0x78350f }));
+      pTrunk.position.y = 2.25;
+      pTrunk.rotation.z = (Math.random() - 0.5) * 0.25;
+      palm.add(pTrunk);
+
+      for (let fi = 0; fi < 6; fi++) {
+        const fang = (fi / 6) * Math.PI * 2;
+        const frond = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.05, 0.4), new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 }));
+        frond.position.set(Math.cos(fang) * 1.1, 4.3, Math.sin(fang) * 1.1);
+        frond.rotation.y = -fang;
+        frond.rotation.z = 0.35;
+        palm.add(frond);
+      }
+
+      waterParkGroup.add(palm);
+    });
+
+    this.streetGroup.add(waterParkGroup);
+  }
+
   // Initialize Animated Street Traffic (Xe cộ qua lại trên đường)
   initStreetTraffic(roadZ) {
     this.trafficCars = [];
 
-    // Helper to build low-poly vehicle model
-    const createCarModel = (bodyColor, isTaxi = false, isVan = false, isBus = false) => {
+    const createCarModel = (bodyColor, isTaxi = false, isVan = false, isBus = false, isSportscar = false) => {
       const car = new THREE.Group();
       const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.3, metalness: 0.3 });
       const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, opacity: 0.7, transparent: true });
       const wheelMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.7 });
       const lightMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
 
-      const carLen = isBus ? 7.6 : (isVan ? 5.2 : 4.4);
+      const carLen = isBus ? 7.6 : (isVan ? 5.2 : (isSportscar ? 4.6 : 4.4));
       const carWid = isBus ? 2.4 : (isVan ? 2.1 : 1.9);
-      const carHgt = isBus ? 2.9 : (isVan ? 2.4 : 1.4);
+      const carHgt = isBus ? 2.9 : (isVan ? 2.4 : (isSportscar ? 1.1 : 1.4));
 
       // Lower Chassis
       const chassis = new THREE.Mesh(new THREE.BoxGeometry(carLen, 0.6, carWid), bodyMat);
@@ -3498,17 +4329,27 @@ class Shop3D {
       car.add(chassis);
 
       // Cabin / Greenhouse
-      const cabinLen = isBus ? 6.8 : (isVan ? 3.8 : 2.5);
-      const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinLen, carHgt * 0.6, carWid * 0.9), glassMat);
-      cabin.position.set(isBus ? 0 : (isVan ? -0.4 : -0.2), 0.85 + (carHgt * 0.3), 0);
-      car.add(cabin);
+      if (!isSportscar) {
+        const cabinLen = isBus ? 6.8 : (isVan ? 3.8 : 2.5);
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinLen, carHgt * 0.6, carWid * 0.9), glassMat);
+        cabin.position.set(isBus ? 0 : (isVan ? -0.4 : -0.2), 0.85 + (carHgt * 0.3), 0);
+        car.add(cabin);
 
-      // Cabin Roof
-      const cRoof = new THREE.Mesh(new THREE.BoxGeometry(cabinLen + 0.1, 0.08, carWid * 0.92), bodyMat);
-      cRoof.position.set(isBus ? 0 : (isVan ? -0.4 : -0.2), 0.85 + (carHgt * 0.6), 0);
-      car.add(cRoof);
+        const cRoof = new THREE.Mesh(new THREE.BoxGeometry(cabinLen + 0.1, 0.08, carWid * 0.92), bodyMat);
+        cRoof.position.set(isBus ? 0 : (isVan ? -0.4 : -0.2), 0.85 + (carHgt * 0.6), 0);
+        car.add(cRoof);
+      } else {
+        // Sportscar Windshield & Roll Hoop
+        const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, carWid * 0.85), glassMat);
+        windshield.position.set(0.3, 0.95, 0);
+        windshield.rotation.z = -0.35;
+        car.add(windshield);
 
-      // Taxi Roof Sign
+        const rollHoop = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.04, 8, 12), steelMat);
+        rollHoop.position.set(-0.6, 1.1, 0);
+        car.add(rollHoop);
+      }
+
       if (isTaxi) {
         const sign = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.22, 0.35), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
         sign.position.set(-0.2, 0.85 + (carHgt * 0.6) + 0.15, 0);
@@ -3522,7 +4363,7 @@ class Shop3D {
         car.add(hLight);
       });
 
-      // 4 or 6 Wheels
+      // Wheels
       const wheels = [];
       const wxOffsets = isBus ? [-carLen * 0.35, 0, carLen * 0.35] : [-carLen * 0.3, carLen * 0.3];
       const wzOffsets = [-carWid / 2 - 0.05, carWid / 2 + 0.05];
@@ -3542,54 +4383,66 @@ class Shop3D {
     };
 
     // 1. Yellow City Taxi traveling Right (speed +8.5 m/s, Z = roadZ - 3.5)
-    const taxi = createCarModel(0xfacc15, true, false, false);
+    const taxi = createCarModel(0xfacc15, true, false, false, false);
     taxi.mesh.position.set(-18, 0, roadZ - 3.5);
     this.trafficCars.push({
       ...taxi,
       speed: 8.5,
       direction: 1, // moving +X
-      minX: -80,
-      maxX: 60
+      minX: -95,
+      maxX: 75
     });
     this.streetGroup.add(taxi.mesh);
 
     // 2. Blue Delivery Van traveling Left (speed -6.5 m/s, Z = roadZ + 3.5)
-    const van = createCarModel(0x0284c7, false, true, false);
+    const van = createCarModel(0x0284c7, false, true, false, false);
     van.mesh.position.set(20, 0, roadZ + 3.5);
     van.mesh.rotation.y = Math.PI; // facing -X
     this.trafficCars.push({
       ...van,
       speed: -6.5,
       direction: -1, // moving -X
-      minX: -80,
-      maxX: 60
+      minX: -95,
+      maxX: 75
     });
     this.streetGroup.add(van.mesh);
 
     // 3. Red Compact Sedan traveling Right (speed +10.0 m/s, Z = roadZ - 1.5)
-    const sedan = createCarModel(0xef4444, false, false, false);
+    const sedan = createCarModel(0xef4444, false, false, false, false);
     sedan.mesh.position.set(2, 0, roadZ - 1.5);
     this.trafficCars.push({
       ...sedan,
       speed: 10.0,
       direction: 1,
-      minX: -80,
-      maxX: 60
+      minX: -95,
+      maxX: 75
     });
     this.streetGroup.add(sedan.mesh);
 
     // 4. Green City Bus traveling Left through tunnel and across city (speed -6.0 m/s, Z = roadZ + 1.5)
-    const bus = createCarModel(0x16a34a, false, false, true);
+    const bus = createCarModel(0x16a34a, false, false, true, false);
     bus.mesh.position.set(45, 0, roadZ + 1.5);
     bus.mesh.rotation.y = Math.PI; // facing -X
     this.trafficCars.push({
       ...bus,
       speed: -6.0,
       direction: -1,
-      minX: -80,
-      maxX: 60
+      minX: -95,
+      maxX: 75
     });
     this.streetGroup.add(bus.mesh);
+
+    // 5. Purple Convertible Sportscar traveling Right across the extended avenue (speed +12.5 m/s, Z = roadZ - 2.5)
+    const sportscar = createCarModel(0x8b5cf6, false, false, false, true);
+    sportscar.mesh.position.set(-60, 0, roadZ - 2.5);
+    this.trafficCars.push({
+      ...sportscar,
+      speed: 12.5,
+      direction: 1,
+      minX: -95,
+      maxX: 75
+    });
+    this.streetGroup.add(sportscar.mesh);
   }
 
   // Initialize Sidewalk Pedestrians (Người đi bộ dạo phố)
@@ -4221,9 +5074,19 @@ class Shop3D {
       const ledColor = anyAlarm ? ((Math.floor(Date.now() / 200) % 2 === 0) ? 0xef4444 : 0x7f1d1d) : 0x10b981;
       this.securityGateLEDs.forEach(led => led.material.color.setHex(ledColor));
     }
+
+    // 7. ANIMATE COLOSSAL FERRIS WHEEL IN DRY THEME PARK
+    if (this.ferrisWheelGroup) {
+      this.ferrisWheelGroup.rotation.z += dt * 0.2;
+      if (this.ferrisGondolas) {
+        this.ferrisGondolas.forEach(g => {
+          g.rotation.z = -this.ferrisWheelGroup.rotation.z;
+        });
+      }
+    }
   }
 
-  // FIRST-PERSON PLAYER MOVEMENT & COLLISION (Seamless City, River Bridge, Alley & Lake Park Walk)
+  // FIRST-PERSON PLAYER MOVEMENT & COLLISION (Seamless City, River Bridge, Alley, Lake & Both Parks)
   updatePlayerMovement(dt) {
     if (this.viewMode !== 'fps') return;
 
@@ -4287,7 +5150,7 @@ class Shop3D {
           newZ = Math.max(-this.storeDepth / 2 + 1.2, targetZ);
         }
       } else {
-        // Player currently outside in the expansive city!
+        // Player currently outside in the expansive city & parks!
         if (targetZ < wallZ) {
           // Attempting to re-enter store: allowed ONLY if in doorway
           if (p.pos.x >= doorMinX && p.pos.x <= doorMaxX) {
@@ -4296,8 +5159,8 @@ class Shop3D {
             newZ = Math.max(wallZ + 0.2, targetZ); // Blocked by storefront glass
           }
         } else {
-          // Max outdoor city depth (Lake park far boundary)
-          newZ = Math.min(67.0, targetZ);
+          // Max outdoor city depth (Water park & Theme park far boundary)
+          newZ = Math.min(116.0, targetZ);
         }
       }
 
@@ -4309,12 +5172,12 @@ class Shop3D {
         newX = Math.max(minX, Math.min(maxX, targetX));
       } else {
         // Outside in city:
-        // Overall city X-bounds: from West mountain tunnel exit (-84m) to East High-Rise District (+60m)
-        newX = Math.max(-84.0, Math.min(60.0, targetX));
+        // Overall city X-bounds: from West mountain tunnel exit (-92m) to East High-Rise District (+72m)
+        newX = Math.max(-92.0, Math.min(72.0, targetX));
 
-        // River Safety Check: River is at X in [-38, -22].
+        // River Safety Check: River is at X in [-38, -22], Z in [-15, 70].
         // Player can ONLY cross if on the Bridge (Z in [16.5, 33.5])!
-        if (newX < -22.0 && newX > -38.0) {
+        if (newX < -22.0 && newX > -38.0 && newZ <= 70.0) {
           if (newZ < 16.5 || newZ > 33.5) {
             if (p.pos.x >= -22.0) newX = -22.0;
             else if (p.pos.x <= -38.0) newX = -38.0;
@@ -4325,24 +5188,23 @@ class Shop3D {
         // Highway Mountain Tunnel Corridor (X in [-80, -50]):
         // Tunnel tube & pedestrian walkway is at Z in [17.0, 33.0].
         // Player is safe inside the tunnel; outside is the solid mountain rock ridge!
-        if (newX <= -50.0 && newX >= -80.0) {
+        if (newX <= -50.0 && newX >= -80.0 && newZ <= 70.0) {
           newZ = Math.max(17.2, Math.min(32.8, newZ));
         }
 
-        // West of Tunnel Portal (X < -80.0):
-        if (newX < -80.0) {
+        // West of Tunnel Portal (X < -80.0, Z <= 70.0):
+        if (newX < -80.0 && newZ <= 70.0) {
           newZ = Math.max(16.5, Math.min(33.5, newZ));
         }
 
-        // Alley & Lake Entrance Constraints:
-        // North of the main street sidewalk (Z > 38.0):
-        if (newZ > 38.0) {
+        // Mid-city zone (Z in [38.0, 70.0]):
+        if (newZ > 38.0 && newZ <= 70.0) {
           if (newX <= 35.5) {
             if (newZ <= 42.0) {
               // Must be within the alley corridor
               newX = Math.max(15.0, Math.min(20.2, newX));
             } else {
-              // Inside Lake Park (Z in [42.0, 67.0], X in [5.0, 35.5])
+              // Inside Lake Park (Z in [42.0, 68.0], X in [5.0, 35.5])
               newX = Math.max(5.0, Math.min(35.5, newX));
 
               // Lake Water Safety Check:
@@ -4352,7 +5214,6 @@ class Shop3D {
               const onBridgeOrPavilion = (newX >= 18.2 && newX <= 21.8 && newZ >= 43.5 && newZ <= 58.5);
 
               if (inWaterBox && !onBridgeOrPavilion) {
-                // Constrain to nearest promenade edge
                 if (p.pos.z <= 44.5) newZ = 44.5;
                 else if (p.pos.z >= 65.5) newZ = 65.5;
                 else if (p.pos.x <= 8.5) newX = 8.5;
@@ -4362,9 +5223,19 @@ class Shop3D {
                 }
               }
             }
-          } else {
-            // East district North edge
-            newZ = Math.min(40.0, newZ);
+          }
+        }
+
+        // North Parks Zone (Z in [70.0, 116.0]):
+        if (newZ > 70.0) {
+          // Water Park Wave Pool Safety Check:
+          // Deep wave pool drop is at X in [-32.0, -4.0], Z in [84.0, 105.0]
+          if (newX > -32.0 && newX < -4.0 && newZ > 84.0 && newZ < 105.0) {
+            if (p.pos.z <= 84.0) newZ = 84.0;
+            else if (p.pos.z >= 105.0) newZ = 105.0;
+            else if (p.pos.x <= -32.0) newX = -32.0;
+            else if (p.pos.x >= -4.0) newX = -4.0;
+            else newZ = 84.0;
           }
         }
       }
@@ -4436,6 +5307,10 @@ class Shop3D {
           promptText.innerText = 'Thủy Tạ: Ngắm hoa sen giữa hồ nước [E] 🪷';
         } else if (data.type === 'tunnel_echo') {
           promptText.innerText = 'Đường hầm: Hét to thử tiếng vọng vang vang [E] 🚇';
+        } else if (data.type === 'dry_park_kiosk') {
+          promptText.innerText = 'Tiệm kem công viên: Mua que kem 3 màu mát lạnh [E] 🍦';
+        } else if (data.type === 'water_park_slide') {
+          promptText.innerText = 'Công viên nước: Lao mình vào máng trượt nước sảng khoái [E] 🏊';
         }
       }
     } else {
@@ -4528,6 +5403,20 @@ class Shop3D {
       this.game.reputation = Math.min(100, this.game.reputation + 5);
       this.game.addFloatingText('🚇 TIẾNG VỌNG VANG VỌNG TRONG HẦM: +5 UY TÍN & +TĂNG TỐC!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#f59e0b');
       this.game.log('🚇 "A lô... ô... ô...!" - Tiếng hét của bạn vang vọng rền rĩ suốt 30 mét đường hầm! Gió hầm mát rượi giúp bạn sảng khoái tinh thần, tiệm nhận +5 Uy tín & tăng tốc độ chạy!');
+      this.game.updateStatsUI();
+    } else if (targetData.type === 'dry_park_kiosk') {
+      if (window.gameAudio) gameAudio.playChaChing();
+      this.player.speedBoostTimer = 60;
+      this.game.reputation = Math.min(100, this.game.reputation + 8);
+      this.game.addFloatingText('🍦 KEM ỐC QUẾ CÔNG VIÊN: +8 UY TÍN & +TĂNG TỐC!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#f59e0b');
+      this.game.log('🍦 Bạn thưởng thức một cây kem ốc quế mát lạnh ngọt ngào tại Công viên giải trí! Tinh thần sảng khoái, Uy tín +8 & tăng tốc độ chạy trong 60 giây!');
+      this.game.updateStatsUI();
+    } else if (targetData.type === 'water_park_slide') {
+      if (window.gameAudio) gameAudio.playChaChing();
+      this.player.speedBoostTimer = 60;
+      this.game.reputation = Math.min(100, this.game.reputation + 8);
+      this.game.addFloatingText('🏊 TRƯỢT ỐNG NƯỚC CẢM GIÁC MẠNH: +8 UY TÍN & +TĂNG TỐC!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#06b6d4');
+      this.game.log('🏊 "VÙUUU... TÕMMMM!" - Bạn phóng từ tháp cao 12 mét trượt xoắn ốc rơi tõm xuống hồ nước mát rượi! Sảng khoái tột độ, Uy tín +8 & tăng tốc chạy trong 60 giây!');
       this.game.updateStatsUI();
     }
   }
@@ -4745,6 +5634,12 @@ class Shop3D {
       <button id="btn-view-tunnel" class="cam-btn-view cam-btn-tunnel" title="Xem nhanh Đường Hầm Đô Thị Xuyên Núi">
         🚇 Đường hầm
       </button>
+      <button id="btn-view-drypark" class="cam-btn-view cam-btn-drypark" title="Xem nhanh Công Viên Khô - Đu Quay Khổng Lồ & Sân Bóng Rổ">
+        🎡 Công viên khô
+      </button>
+      <button id="btn-view-waterpark" class="cam-btn-view cam-btn-waterpark" title="Xem nhanh Công Viên Nước - Máng Trượt & Hồ Tạo Sóng">
+        🏊 Công viên nước
+      </button>
       <button id="btn-toggle-camera-mode" class="cam-btn" title="Chuyển đổi giữa góc nhìn Quản lý 3D và Góc nhìn thứ nhất (Phím V)">
         🔄 Đổi góc nhìn [Phím V]
       </button>
@@ -4832,6 +5727,26 @@ class Shop3D {
         new THREE.Vector3(-65, 3.5, 25),
         'btn-view-tunnel',
         '🚇 Đang ngắm toàn cảnh Đường Hầm Đô Thị Xuyên Núi hoành tráng!'
+      );
+    };
+
+    // 7. Click: Smooth glide to Dry Theme & Sports Park view
+    document.getElementById('btn-view-drypark').onclick = () => {
+      this.transitionToView(
+        new THREE.Vector3(42, 28, 128),
+        new THREE.Vector3(42, 10, 95),
+        'btn-view-drypark',
+        '🎡 Đang ngắm toàn cảnh Công Viên Khô - Đu Quay Khổng Lồ & Sân Bóng Rổ!'
+      );
+    };
+
+    // 8. Click: Smooth glide to Aqua Water Park view
+    document.getElementById('btn-view-waterpark').onclick = () => {
+      this.transitionToView(
+        new THREE.Vector3(-20, 26, 126),
+        new THREE.Vector3(-20, 4, 94),
+        'btn-view-waterpark',
+        '🏊 Đang ngắm toàn cảnh Công Viên Nước - Máng Trượt Xoắn Ốc & Hồ Tạo Sóng!'
       );
     };
 
