@@ -1370,13 +1370,15 @@ class ShopkeeperGame {
   }
 
   checkRandomEventTrigger(dt) {
+    if (typeof RANDOM_EVENTS === 'undefined' || !RANDOM_EVENTS.length) return;
     if (Math.random() < 0.0006 * dt && !this.isDayEnding) {
       const ev = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
-      this.showEventModal(ev);
+      if (ev) this.showEventModal(ev);
     }
   }
 
   showEventModal(eventObj) {
+    if (!eventObj || !eventObj.choices || !eventObj.choices.length) return;
     const modal = document.getElementById('modal-event');
     if (!modal) return;
 
@@ -2415,6 +2417,15 @@ class ShopkeeperGame {
       btnCloseAssign.onclick = () => {
         document.getElementById('modal-assign-shelf').classList.add('hidden');
       };
+    }
+
+    const btnCloseEvent = document.getElementById('btn-close-event-modal');
+    const modalEvent = document.getElementById('modal-event');
+    if (btnCloseEvent && modalEvent) {
+      btnCloseEvent.onclick = () => modalEvent.classList.add('hidden');
+      modalEvent.addEventListener('click', (e) => {
+        if (e.target === modalEvent) modalEvent.classList.add('hidden');
+      });
     }
 
     // Start Next Day Button

@@ -613,11 +613,7 @@ const RANDOM_EVENTS = [
             state.log('🏆 Cửa hàng đạt chuẩn vệ sinh xuất sắc! Nhận giấy khen và thưởng 150.000₫.');
             gameAudio.playUpgrade();
           } else {
-            const fine = 100000;
-            state.money = Math.max(0, state.money - fine);
-            state.reputation = Math.max(10, state.reputation - 8);
-            state.log('⚠️ Cửa hàng chưa đủ sạch sẽ! Bị nhắc nhở và phạt 100.000₫.');
-            gameAudio.playAngry();
+            state.log('⚠️ Đoàn kiểm tra nhắc nhở nhẹ: Cửa hàng nên chú ý quét dọn sạch sẽ thường xuyên hơn.');
           }
         }
       }
@@ -634,35 +630,6 @@ const RANDOM_EVENTS = [
         action: (state) => {
           state.activeBuffs['market_discount'] = 0.7;
           state.log('🎉 Flash sale: Giá sỉ hôm nay được giảm 30%!');
-        }
-      }
-    ]
-  },
-  {
-    id: 'event_power_outage',
-    title: 'Sự Cố Điện Lưới Cục Bộ ⚡',
-    icon: '⚠️',
-    desc: 'Điện bị chập chờn! Cần gọi thợ sửa chữa gấp để bảo vệ hàng hóa.',
-    choices: [
-      {
-        text: 'Thuê thợ sửa chữa khẩn cấp (Chi phí 80.000₫)',
-        action: (state) => {
-          state.money = Math.max(0, state.money - 80000);
-          state.log('🔧 Đã khắc phục sự cố điện kịp thời!');
-        }
-      },
-      {
-        text: 'Tự mày mò sửa (Có nguy cơ hỏng 3 món hàng)',
-        action: (state) => {
-          let spoiled = 0;
-          for (let shelf of state.shelves) {
-            if (shelf.quantity > 0 && Math.random() < 0.5) {
-              const loss = Math.min(shelf.quantity, 2);
-              shelf.quantity -= loss;
-              spoiled += loss;
-            }
-          }
-          state.log(`⚡ Sửa chậm khiến ${spoiled} món hàng bị ảnh hưởng chất lượng.`);
         }
       }
     ]
