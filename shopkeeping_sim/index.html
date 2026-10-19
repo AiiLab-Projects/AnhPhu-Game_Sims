@@ -175,6 +175,12 @@
           <button id="btn-quick-restock" class="btn-action pulse" title="Xếp tự động toàn bộ hàng từ kho lên các kệ còn trống">
             ⚡ Xếp nhanh lên kệ
           </button>
+          <button id="btn-toggle-autobuy" class="btn-action-autobuy" title="Bật/Tắt hệ thống tự động mua hàng từ chợ sỉ khi kho/kệ sắp hết">
+            🤖 Tự mua: <span id="autobuy-status-badge">TẮT</span>
+          </button>
+          <button id="btn-instant-autobuy" class="btn-action-autobuy-fill" title="Tự động tính toán và mua đầy đủ tất cả mặt hàng đang bán trên kệ">
+            ⚡ Tự mua lấp đầy
+          </button>
           <button id="btn-clean-store" class="btn-action-secondary" title="Dọn rác, lau sàn tiệm (+10% sạch sẽ)">
             🧹 Quét dọn quán
           </button>
@@ -223,7 +229,12 @@
                 <h3>Quản Lý Kệ Trưng Bày</h3>
                 <p class="subtext">Gán mặt hàng lên kệ và thiết lập giá bán niêm yết</p>
               </div>
-              <span class="shelf-count-badge" id="shelf-usage-badge">Kệ: 3 / 3</span>
+              <div class="shelf-header-right">
+                <button id="btn-shelf-toggle-autobuy" class="btn-chip-autobuy" title="Bật/Tắt tự động mua hàng từ chợ sỉ khi kho/kệ sắp hết">
+                  🤖 Tự mua: <span id="shelf-autobuy-status">TẮT</span>
+                </button>
+                <span class="shelf-count-badge" id="shelf-usage-badge">Kệ: 3 / 3</span>
+              </div>
             </div>
 
             <!-- Shelf Grid -->
@@ -241,6 +252,28 @@
               </div>
               <div class="warehouse-badge">
                 Kho: <span id="wh-used">0</span> / <span id="wh-max">50</span>
+              </div>
+            </div>
+
+            <!-- AUTO BUY CONTROL BANNER -->
+            <div class="autobuy-banner" id="autobuy-market-banner">
+              <div class="autobuy-banner-info">
+                <div class="autobuy-banner-icon">🤖</div>
+                <div class="autobuy-banner-text">
+                  <div class="autobuy-banner-title">
+                    <h4>Hệ Thống Tự Động Mua Hàng Sỉ (Auto-Order)</h4>
+                    <span id="banner-autobuy-pill" class="badge-status-off">ĐANG TẮT</span>
+                  </div>
+                  <p class="subtext">Tự động đặt mua thêm các mặt hàng đang bày bán khi tồn kho sắp hết, không lo đứt hàng!</p>
+                </div>
+              </div>
+              <div class="autobuy-banner-actions">
+                <button id="btn-banner-toggle-autobuy" class="btn-action-toggle-autobuy">
+                  🤖 Bật Tự Động Mua
+                </button>
+                <button id="btn-banner-instant-autobuy" class="btn-action-instant-fill" title="Tự động mua ngay tất cả các món đang thiếu cho các kệ">
+                  ⚡ Mua tự động tất cả
+                </button>
               </div>
             </div>
 

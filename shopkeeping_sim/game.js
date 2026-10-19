@@ -106,6 +106,14 @@ class ShopkeeperGame {
     this.isDayEnding = false;
     this.autoSaveTimer = 0;
 
+    // Automatic Wholesale Purchasing System (Tự Động Mua Hàng)
+    this.autoBuyEnabled = false;
+    this.autoBuyTimer = 0;
+    this.autoBuyInterval = 3.0; // Check stocks every 3s
+    this.autoBuyThreshold = 8;  // When stock drops below 8 in warehouse
+    this.autoBuyBatchSize = 10; // Amount to buy each order
+    this.autoBuyMinMoneyReserve = 50000; // Keep 50.000đ safety emergency reserve
+
     this.init();
   }
 
@@ -254,6 +262,9 @@ class ShopkeeperGame {
 
     // 5. Checkout Processing
     this.updateCheckout(dt);
+
+    // 5b. Automatic Wholesale Purchasing System (Tự Động Mua Hàng Sỉ)
+    this.updateAutoBuy(dt);
 
     // 6. Cleanliness & Dirt generation
     this.updateStoreHygiene(dt);
@@ -1538,6 +1549,248 @@ class ShopkeeperGame {
     }
   }
 
+  // ==========================================
+  // AUTOMATIC WHOLESALE PURCHASING (TỰ ĐỘNG MUA HÀNG)
+  // ==========================================
+
+  toggleAutoBuy(forcedState = null) {
+    if (forcedState !== null) {
+      this.autoBuyEnabled = forcedState;
+    } else {
+      this.autoBuyEnabled = !this.autoBuyEnabled;
+    }
+
+    if (this.autoBuyEnabled) {
+      if (window.gameAudio) gameAudio.playUpgrade();
+      this.log('🤖 Đã BẬT [Tự Động Mua Hàng]! Hệ thống sẽ tự động đặt mua hàng sỉ từ chợ đầu mối khi kho/kệ sắp hết.');
+      this.addFloatingText('🤖 BẬT TỰ ĐỘNG MUA HÀNG!', (this.canvas ? this.canvas.width : 600) * 0.5, 140, '#10b981');
+      // Immediately trigger check and replenishment
+      this.updateAutoBuy(10);
+    } else {
+      if (window.gameAudio) gameAudio.playClick();
+      this.log('⚪ Đã TẮT [Tự Động Mua Hàng]. Bạn sẽ quản lý việc mua hàng thủ công.');
+      this.addFloatingText('⚪ TẮT TỰ ĐỘNG MUA', (this.canvas ? this.canvas.width : 600) * 0.5, 140, '#94a3b8');
+    }
+
+    this.updateAutoBuyUI();
+    this.saveGame(false);
+  }
+
+  // AUTOMATIC PURCHASING ENGINE (Runs continuously in game loop)
+  updateAutoBuy(dt) {
+    if (!this.autoBuyEnabled) return;
+
+    this.autoBuyTimer += dt;
+    if (this.autoBuyTimer < this.autoBuyInterval) return;
+    this.autoBuyTimer = 0;
+
+    // 1. Identify all active items currently assigned to shelves
+    const activeItemIds = new Set();
+    this.shelves.forEach(s => {
+      if (s.itemId) activeItemIds.add(s.itemId);
+    });
+
+    if (activeItemIds.size === 0) return;
+
+    const currentWhTotal = this.getWarehouseTotalCount();
+    let freeCapacity = this.warehouseCapacity - currentWhTotal;
+    if (freeCapacity <= 0) return; // Warehouse full
+
+    let boughtCount = 0;
+    let totalSpent = 0;
+    const boughtItemsSummary = [];
+
+    for (const itemId of activeItemIds) {
+      if (freeCapacity <= 0) break;
+
+      const item = GAME_ITEMS.find(i => i.id === itemId);
+      if (!item) continue;
+
+      const inWh = this.warehouse[itemId] || 0;
+      let onShelves = 0;
+      let shelfCap = 0;
+      this.shelves.forEach(s => {
+        if (s.itemId === itemId) {
+          onShelves += s.quantity;
+          shelfCap += s.maxQuantity;
+        }
+      });
+
+      // Trigger auto-buy if warehouse is below threshold OR when shelf is low and warehouse is empty
+      if (inWh < this.autoBuyThreshold || (inWh === 0 && onShelves < shelfCap * 0.6)) {
+        let wantQty = Math.max(this.autoBuyBatchSize, (shelfCap - onShelves) + this.autoBuyBatchSize - inWh);
+        let qtyToBuy = Math.min(wantQty, freeCapacity);
+
+        let unitCost = this.marketPrices[itemId] || item.baseCost;
+        if (this.activeBuffs['market_discount']) {
+          unitCost = Math.round(unitCost * this.activeBuffs['market_discount']);
+        }
+
+        // Safety Reserve: ensure the player retains at least 50.000₫ emergency cash
+        const availableMoney = this.money - this.autoBuyMinMoneyReserve;
+        if (availableMoney <= 0) continue;
+
+        const affordable = Math.floor(availableMoney / unitCost);
+        qtyToBuy = Math.min(qtyToBuy, affordable);
+        if (qtyToBuy <= 0) continue;
+
+        const cost = qtyToBuy * unitCost;
+        this.money -= cost;
+        this.dailyCostGoods += cost;
+        this.warehouse[itemId] = (this.warehouse[itemId] || 0) + qtyToBuy;
+        freeCapacity -= qtyToBuy;
+        boughtCount += qtyToBuy;
+        totalSpent += cost;
+        boughtItemsSummary.push(`${qtyToBuy}x ${item.name}`);
+      }
+    }
+
+    if (boughtCount > 0) {
+      if (window.gameAudio) gameAudio.playChaChing();
+      this.addFloatingText(`🤖 Tự mua +${boughtCount} món!`, (this.canvas ? this.canvas.width : 600) * 0.5, 120, '#38bdf8');
+      this.log(`🤖 [Tự Động Mua Hàng] Đã tự động đặt mua sỉ ${boughtCount} sản phẩm (${boughtItemsSummary.join(', ')}) với tổng chi phí ${this.formatCurrency(totalSpent)}.`);
+
+      // If player doesn't have a restocker staff, auto-transfer to any empty shelves
+      if (!this.hiredStaff.includes('staff_restocker')) {
+        for (let shelf of this.shelves) {
+          if (shelf.itemId && shelf.quantity === 0) {
+            const inStock = this.warehouse[shelf.itemId] || 0;
+            if (inStock > 0) {
+              const transfer = Math.min(shelf.maxQuantity, inStock);
+              shelf.quantity += transfer;
+              this.warehouse[shelf.itemId] -= transfer;
+            }
+          }
+        }
+      }
+
+      this.updateAllUI();
+      if (this.shop3D && this.shop3D.refreshAllShelfLabels) {
+        this.shop3D.refreshAllShelfLabels();
+      }
+    }
+  }
+
+  // INSTANT AUTO-BUY ALL NEEDED STOCK (1-Click Fill)
+  instantAutoBuyAll() {
+    const activeItemIds = new Set();
+    this.shelves.forEach(s => {
+      if (s.itemId) activeItemIds.add(s.itemId);
+    });
+
+    if (activeItemIds.size === 0) {
+      alert('Chưa có mặt hàng nào được gán lên kệ! Hãy gán mặt hàng lên kệ trước.');
+      return;
+    }
+
+    const currentWhTotal = this.getWarehouseTotalCount();
+    let freeCapacity = this.warehouseCapacity - currentWhTotal;
+    if (freeCapacity <= 0) {
+      alert(`Kho hàng đã đầy (${this.warehouseCapacity}/${this.warehouseCapacity})! Hãy nâng cấp kho bãi hoặc bán bớt hàng.`);
+      return;
+    }
+
+    let totalBought = 0;
+    let totalSpent = 0;
+    const boughtList = [];
+
+    const perItemTarget = Math.max(12, Math.floor(this.warehouseCapacity / activeItemIds.size));
+
+    for (const itemId of activeItemIds) {
+      if (freeCapacity <= 0) break;
+      const item = GAME_ITEMS.find(i => i.id === itemId);
+      if (!item) continue;
+
+      const inWh = this.warehouse[itemId] || 0;
+      let want = perItemTarget - inWh;
+      if (want <= 0) continue;
+
+      let unitCost = this.marketPrices[itemId] || item.baseCost;
+      if (this.activeBuffs['market_discount']) {
+        unitCost = Math.round(unitCost * this.activeBuffs['market_discount']);
+      }
+
+      let qty = Math.min(want, freeCapacity);
+      const affordable = Math.floor(this.money / unitCost);
+      qty = Math.min(qty, affordable);
+      if (qty <= 0) continue;
+
+      const cost = qty * unitCost;
+      this.money -= cost;
+      this.dailyCostGoods += cost;
+      this.warehouse[itemId] = (this.warehouse[itemId] || 0) + qty;
+      freeCapacity -= qty;
+      totalBought += qty;
+      totalSpent += cost;
+      boughtList.push(`${qty}x ${item.name}`);
+    }
+
+    if (totalBought > 0) {
+      if (window.gameAudio) gameAudio.playChaChing();
+      this.addFloatingText(`⚡ Tự nhập +${totalBought} món!`, (this.canvas ? this.canvas.width : 600) * 0.5, 120, '#10b981');
+      this.log(`⚡ [Tự Mua Hàng] Đã tự động nhập đầy kho ${totalBought} món (${boughtList.join(', ')}) với tổng chi phí ${this.formatCurrency(totalSpent)}!`);
+      this.updateAllUI();
+      this.quickRestockAllShelves();
+    } else {
+      if (this.money < 10000) {
+        alert('Không đủ ngân quỹ để tự động mua thêm hàng!');
+      } else {
+        alert('Lượng hàng trong kho hiện đã đầy đủ cho tất cả các kệ đang bán!');
+      }
+    }
+  }
+
+  // UPDATE AUTO-BUY UI ELEMENTS
+  updateAutoBuyUI() {
+    const isEn = !!this.autoBuyEnabled;
+    const statusText = isEn ? 'BẬT' : 'TẮT';
+
+    // 1. Bottom quick bar button
+    const btnQuick = document.getElementById('btn-toggle-autobuy');
+    const badgeQuick = document.getElementById('autobuy-status-badge');
+    if (btnQuick && badgeQuick) {
+      badgeQuick.innerText = statusText;
+      if (isEn) {
+        btnQuick.classList.add('active');
+      } else {
+        btnQuick.classList.remove('active');
+      }
+    }
+
+    // 2. Shelf header chip
+    const btnShelf = document.getElementById('btn-shelf-toggle-autobuy');
+    const badgeShelf = document.getElementById('shelf-autobuy-status');
+    if (btnShelf && badgeShelf) {
+      badgeShelf.innerText = statusText;
+      if (isEn) {
+        btnShelf.classList.add('active');
+      } else {
+        btnShelf.classList.remove('active');
+      }
+    }
+
+    // 3. Wholesale Market tab banner
+    const banner = document.getElementById('autobuy-market-banner');
+    const bannerPill = document.getElementById('banner-autobuy-pill');
+    const btnBanner = document.getElementById('btn-banner-toggle-autobuy');
+    if (banner && bannerPill && btnBanner) {
+      if (isEn) {
+        banner.classList.add('active');
+        bannerPill.className = 'badge-status-on';
+        bannerPill.innerText = 'ĐANG BẬT 🟢';
+        btnBanner.classList.add('active');
+        btnBanner.innerText = '✓ Đang Tự Động Mua';
+      } else {
+        banner.classList.remove('active');
+        bannerPill.className = 'badge-status-off';
+        bannerPill.innerText = 'ĐANG TẮT ⚪';
+        btnBanner.classList.remove('active');
+        btnBanner.innerText = '🤖 Bật Tự Động Mua';
+      }
+    }
+  }
+
+
   // SHELF ASSIGNMENT & PRICING
   openShelfAssignModal(shelfIndex) {
     this.selectedShelfForAssign = shelfIndex;
@@ -2053,6 +2306,26 @@ class ShopkeeperGame {
     if (btnQuickRestock) {
       btnQuickRestock.onclick = () => this.quickRestockAllShelves();
     }
+    const btnToggleAutoBuy = document.getElementById('btn-toggle-autobuy');
+    if (btnToggleAutoBuy) {
+      btnToggleAutoBuy.onclick = () => this.toggleAutoBuy();
+    }
+    const btnInstantAutoBuy = document.getElementById('btn-instant-autobuy');
+    if (btnInstantAutoBuy) {
+      btnInstantAutoBuy.onclick = () => this.instantAutoBuyAll();
+    }
+    const btnBannerToggle = document.getElementById('btn-banner-toggle-autobuy');
+    if (btnBannerToggle) {
+      btnBannerToggle.onclick = () => this.toggleAutoBuy();
+    }
+    const btnBannerInstant = document.getElementById('btn-banner-instant-autobuy');
+    if (btnBannerInstant) {
+      btnBannerInstant.onclick = () => this.instantAutoBuyAll();
+    }
+    const btnShelfToggle = document.getElementById('btn-shelf-toggle-autobuy');
+    if (btnShelfToggle) {
+      btnShelfToggle.onclick = () => this.toggleAutoBuy();
+    }
     const btnClean = document.getElementById('btn-clean-store');
     if (btnClean) {
       btnClean.onclick = () => this.cleanStoreManually();
@@ -2301,6 +2574,7 @@ class ShopkeeperGame {
     this.renderStaffTab();
     this.renderMarketingTab();
     this.renderFinanceTab();
+    this.updateAutoBuyUI();
 
     if (this.shop3D && this.shop3D.refreshAllShelfLabels) {
       this.shop3D.refreshAllShelfLabels();
@@ -2434,11 +2708,16 @@ class ShopkeeperGame {
       else if (diff < -500) { trendClass = 'trend-down'; trendText = 'Giảm giá ↘'; }
 
       const inWh = this.warehouse[itm.id] || 0;
+      const isOnShelf = this.shelves.some(s => s.itemId === itm.id);
+      const isAutoBuyTarget = isOnShelf && this.autoBuyEnabled;
+
       const card = document.createElement('div');
       card.className = 'market-card';
       card.innerHTML = `
         <div class="item-badge-row">
           <span class="item-category-tag">${this.getCategoryLabel(itm.category)}</span>
+          ${isOnShelf ? '<span class="market-shelf-badge">🛒 Đang bán</span>' : ''}
+          ${isAutoBuyTarget ? '<span class="badge-status-on">🤖 Tự mua: BẬT</span>' : ''}
           <span class="trend-pill ${trendClass}">${trendText}</span>
         </div>
 
@@ -2644,6 +2923,9 @@ class ShopkeeperGame {
         allTimeProfit: this.allTimeProfit,
         allTimeCustomers: this.allTimeCustomers,
         allTimeHappyCustomers: this.allTimeHappyCustomers,
+        autoBuyEnabled: this.autoBuyEnabled,
+        autoBuyThreshold: this.autoBuyThreshold,
+        autoBuyBatchSize: this.autoBuyBatchSize,
         logs: this.logs.slice(-30)
       };
       localStorage.setItem('shopkeeper_save', JSON.stringify(data));
@@ -2692,6 +2974,9 @@ class ShopkeeperGame {
         this.allTimeProfit = data.allTimeProfit || 0;
         this.allTimeCustomers = data.allTimeCustomers || 0;
         this.allTimeHappyCustomers = data.allTimeHappyCustomers || 0;
+        if (data.autoBuyEnabled !== undefined) this.autoBuyEnabled = data.autoBuyEnabled;
+        if (data.autoBuyThreshold) this.autoBuyThreshold = data.autoBuyThreshold;
+        if (data.autoBuyBatchSize) this.autoBuyBatchSize = data.autoBuyBatchSize;
         this.logs = data.logs || [];
       }
     } catch (e) {
