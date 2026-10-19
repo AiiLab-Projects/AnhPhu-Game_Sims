@@ -1622,6 +1622,46 @@ body {
   box-shadow: 0 4px 16px rgba(16, 185, 129, 0.55);
 }
 
+.cam-btn-bridge {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.45);
+}
+.cam-btn-bridge:hover, .cam-btn-bridge.active {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: #ffffff;
+  border-color: #38bdf8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.55);
+}
+
+.cam-btn-lake {
+  background: rgba(236, 72, 153, 0.15);
+  color: #f472b6;
+  border-color: rgba(236, 72, 153, 0.45);
+}
+.cam-btn-lake:hover, .cam-btn-lake.active {
+  background: linear-gradient(135deg, #ec4899, #db2777);
+  color: #ffffff;
+  border-color: #f472b6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(236, 72, 153, 0.55);
+}
+
+.cam-btn-alley {
+  background: rgba(217, 119, 6, 0.15);
+  color: #fbbf24;
+  border-color: rgba(217, 119, 6, 0.45);
+}
+.cam-btn-alley:hover, .cam-btn-alley.active {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #ffffff;
+  border-color: #fbbf24;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.55);
+}
+
+
 .cam-btn {
   background: linear-gradient(135deg, #0284c7, #0369a1);
   color: #ffffff;

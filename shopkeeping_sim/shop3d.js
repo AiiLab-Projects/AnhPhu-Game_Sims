@@ -54,6 +54,9 @@ class Shop3D {
     this.trafficCars = [];
     this.pedestrians = [];
     this.cameraTransition = null;
+    this.riverBoat = null;
+    this.waterSurfaces = [];
+    this.lotusMeshes = [];
 
     this.init();
   }
@@ -460,13 +463,154 @@ class Shop3D {
     this.textures.cafeFacade = makeFacadeTex('☕ CÀ PHÊ PHỐ CỔ', '#78350f', '#0f172a', 'Espresso • Trà Sữa • Bánh Ngọt');
     this.textures.pharmacyFacade = makeFacadeTex('💊 HIỆU THUỐC 24/7', '#059669', '#064e3b', 'Thuốc Chuẩn GPP • Tận Tâm');
     this.textures.bakeryFacade = makeFacadeTex('🥐 TIỆM BÁNH MÌ', '#d97706', '#7c2d12', 'Bánh Mì Nóng Giòn Mỗi Sáng');
+
+    // 12. Animated River & Lake Water Caustic Waves Texture
+    const wCanvas = document.createElement('canvas');
+    wCanvas.width = 512;
+    wCanvas.height = 512;
+    const waterCtx = wCanvas.getContext('2d');
+    waterCtx.fillStyle = '#0284c7';
+    waterCtx.fillRect(0, 0, 512, 512);
+    // Caustic water ripple waves
+    for (let i = 0; i < 40; i++) {
+      const qy = (i * 26) % 512;
+      waterCtx.strokeStyle = i % 2 === 0 ? 'rgba(56, 189, 248, 0.45)' : 'rgba(224, 242, 254, 0.35)';
+      waterCtx.lineWidth = 3 + (i % 3);
+      waterCtx.beginPath();
+      waterCtx.moveTo(0, qy);
+      for (let x = 0; x <= 512; x += 32) {
+        const ny = qy + Math.sin((x / 60) + i) * 8 + Math.cos(x / 40) * 4;
+        waterCtx.lineTo(x, ny);
+      }
+      waterCtx.stroke();
+    }
+    const waterTex = new THREE.CanvasTexture(wCanvas);
+    waterTex.wrapS = THREE.RepeatWrapping;
+    waterTex.wrapT = THREE.RepeatWrapping;
+    waterTex.repeat.set(4, 8);
+    waterTex.needsUpdate = true;
+    this.textures.water = waterTex;
+
+    // 13. Floating Lotus Pad & Flower Texture
+    const lotCanvas = document.createElement('canvas');
+    lotCanvas.width = 256;
+    lotCanvas.height = 256;
+    const lctx = lotCanvas.getContext('2d');
+    // Round lily pad with notch
+    lctx.fillStyle = '#15803d';
+    lctx.beginPath();
+    lctx.arc(128, 128, 110, 0.25, Math.PI * 1.95);
+    lctx.lineTo(128, 128);
+    lctx.fill();
+    // Veins
+    lctx.strokeStyle = '#22c55e';
+    lctx.lineWidth = 3;
+    for (let a = 0.3; a < Math.PI * 1.9; a += 0.4) {
+      lctx.beginPath();
+      lctx.moveTo(128, 128);
+      lctx.lineTo(128 + Math.cos(a) * 100, 128 + Math.sin(a) * 100);
+      lctx.stroke();
+    }
+    // Pink lotus flower in center
+    lctx.fillStyle = '#ec4899';
+    for (let p = 0; p < 8; p++) {
+      const pa = (p / 8) * Math.PI * 2;
+      lctx.beginPath();
+      lctx.ellipse(128 + Math.cos(pa) * 22, 128 + Math.sin(pa) * 22, 18, 10, pa, 0, Math.PI * 2);
+      lctx.fill();
+    }
+    lctx.fillStyle = '#fef08a';
+    lctx.beginPath();
+    lctx.arc(128, 128, 12, 0, Math.PI * 2);
+    lctx.fill();
+    const lotusTex = new THREE.CanvasTexture(lotCanvas);
+    lotusTex.needsUpdate = true;
+    this.textures.lotus = lotusTex;
+
+    // 14. Stone Masonry for Bridge Piers & Balustrades
+    const bsCanvas = document.createElement('canvas');
+    bsCanvas.width = 512;
+    bsCanvas.height = 512;
+    const bsctx = bsCanvas.getContext('2d');
+    bsctx.fillStyle = '#475569';
+    bsctx.fillRect(0, 0, 512, 512);
+    const bsh = 40;
+    const bsw = 80;
+    for (let y = 0; y < 512; y += bsh) {
+      const rowOffset = (y / bsh) % 2 === 0 ? 0 : bsw / 2;
+      for (let x = -bsw; x < 512 + bsw; x += bsw) {
+        bsctx.fillStyle = (x + y) % 3 === 0 ? '#64748b' : ((x + y) % 3 === 1 ? '#526075' : '#3d4a5c');
+        bsctx.fillRect(x + rowOffset + 2, y + 2, bsw - 4, bsh - 4);
+        bsctx.strokeStyle = '#1e293b';
+        bsctx.lineWidth = 2;
+        bsctx.strokeRect(x + rowOffset + 2, y + 2, bsw - 4, bsh - 4);
+      }
+    }
+    const bsTex = new THREE.CanvasTexture(bsCanvas);
+    bsTex.wrapS = THREE.RepeatWrapping;
+    bsTex.wrapT = THREE.RepeatWrapping;
+    bsTex.repeat.set(4, 4);
+    bsTex.needsUpdate = true;
+    this.textures.bridgeStone = bsTex;
+
+    // 15. Vietnamese Alley Ochre Wall & Signs
+    const alCanvas = document.createElement('canvas');
+    alCanvas.width = 512;
+    alCanvas.height = 512;
+    const alctx = alCanvas.getContext('2d');
+    alctx.fillStyle = '#d97706'; // Warm yellow ochre plaster
+    alctx.fillRect(0, 0, 512, 512);
+    // Weathered plaster specks
+    alctx.fillStyle = '#b45309';
+    for (let k = 0; k < 60; k++) {
+      alctx.fillRect(Math.random() * 512, Math.random() * 512, 10 + Math.random() * 30, 4 + Math.random() * 12);
+    }
+    // Vintage French-Indochine green louvered window
+    alctx.fillStyle = '#047857';
+    alctx.fillRect(60, 100, 160, 220);
+    alctx.fillRect(290, 100, 160, 220);
+    alctx.strokeStyle = '#fef08a';
+    alctx.lineWidth = 4;
+    alctx.strokeRect(60, 100, 160, 220);
+    alctx.strokeRect(290, 100, 160, 220);
+    const alTex = new THREE.CanvasTexture(alCanvas);
+    alTex.wrapS = THREE.RepeatWrapping;
+    alTex.wrapT = THREE.RepeatWrapping;
+    alTex.repeat.set(2, 2);
+    alTex.needsUpdate = true;
+    this.textures.alleyWall = alTex;
+
+    // 16. Lake Park Lush Lawn Grass Texture
+    const grCanvas = document.createElement('canvas');
+    grCanvas.width = 512;
+    grCanvas.height = 512;
+    const grctx = grCanvas.getContext('2d');
+    grctx.fillStyle = '#166534';
+    grctx.fillRect(0, 0, 512, 512);
+    for (let x = 0; x < 512; x += 16) {
+      for (let y = 0; y < 512; y += 16) {
+        if ((x + y) % 3 === 0) {
+          grctx.fillStyle = '#15803d';
+          grctx.fillRect(x, y, 16, 16);
+        } else if ((x + y) % 5 === 0) {
+          grctx.fillStyle = '#22c55e';
+          grctx.fillRect(x + 2, y + 2, 8, 8);
+        }
+      }
+    }
+    const grTex = new THREE.CanvasTexture(grCanvas);
+    grTex.wrapS = THREE.RepeatWrapping;
+    grTex.wrapT = THREE.RepeatWrapping;
+    grTex.repeat.set(8, 8);
+    grTex.needsUpdate = true;
+    this.textures.parkGrass = grTex;
   }
 
   setupScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#0b1120');
-    // Clear atmosphere with soft distant city depth
-    this.scene.fog = new THREE.Fog('#0b1120', 26, 95);
+    // Panoramic city depth with scenic atmosphere
+    this.scene.fog = new THREE.Fog('#0b1120', 35, 145);
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -488,8 +632,8 @@ class Shop3D {
   setupCameras() {
     const aspect = this.container.clientWidth / this.container.clientHeight;
 
-    // 1. Isometric / Management Camera (Top-down tilted)
-    this.isoCamera = new THREE.PerspectiveCamera(45, aspect, 0.5, 250);
+    // 1. Isometric / Management Camera (Top-down tilted with full city panoramic range)
+    this.isoCamera = new THREE.PerspectiveCamera(45, aspect, 0.5, 300);
     this.isoCamera.position.set(0, 18, 19);
     this.isoCamera.lookAt(0, 1.2, 0);
 
@@ -500,12 +644,12 @@ class Shop3D {
       this.controls.dampingFactor = 0.08;
       this.controls.maxPolarAngle = Math.PI / 2.05;
       this.controls.minDistance = 5;
-      this.controls.maxDistance = 65; // Extended zoom to view street & neighborhood
+      this.controls.maxDistance = 110; // Extended zoom to view entire city, river & lake
       this.controls.target.set(0, 1.2, 0);
     }
 
     // 2. First-Person FPS Camera
-    this.fpsCamera = new THREE.PerspectiveCamera(72, aspect, 0.1, 200);
+    this.fpsCamera = new THREE.PerspectiveCamera(72, aspect, 0.1, 250);
     this.fpsCamera.position.copy(this.player.pos);
     this.fpsCamera.lookAt(0, 1.65, -5);
 
@@ -515,18 +659,18 @@ class Shop3D {
 
   setupLights() {
     // Soft Ambient Light
-    const ambient = new THREE.AmbientLight(0xfff6ea, 0.75);
+    const ambient = new THREE.AmbientLight(0xfff6ea, 0.78);
     this.scene.add(ambient);
 
-    // Directional Sunlight covering both store interior and street exterior
-    const sunLight = new THREE.DirectionalLight(0xffffff, 0.85);
-    sunLight.position.set(12, 30, 18);
+    // Directional Sunlight covering entire expansive city, river, bridge and lake
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.88);
+    sunLight.position.set(15, 36, 25);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 1024;
     sunLight.shadow.mapSize.height = 1024;
     sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 85;
-    const d = 28;
+    sunLight.shadow.camera.far = 135;
+    const d = 48;
     sunLight.shadow.camera.left = -d;
     sunLight.shadow.camera.right = d;
     sunLight.shadow.camera.top = d;
@@ -1236,13 +1380,13 @@ class Shop3D {
     this.scene.add(this.acGroup);
   }
 
-  // COMPREHENSIVE EXTERIOR STREET & OUTDOOR ENVIRONMENT
+  // COMPREHENSIVE EXTERIOR CITY ENVIRONMENT: STREET, RIVER, BRIDGE, ALLEY & LAKE
   buildExteriorStreet(W, D) {
     this.streetGroup = new THREE.Group();
     const frontZ = D / 2; // 9.0
 
-    // 1. Main Sidewalk in front of Store (Z from 9.0 to 17.0, width 76m)
-    const swGeo = new THREE.PlaneGeometry(76, 8);
+    // 1. Main Sidewalk in front of Store (Z: 9.0 -> 17.0, X: -22 to +15)
+    const swGeo = new THREE.PlaneGeometry(37, 8);
     const swMat = new THREE.MeshStandardMaterial({
       map: this.textures.sidewalk,
       roughness: 0.75,
@@ -1250,19 +1394,19 @@ class Shop3D {
     });
     const sidewalk = new THREE.Mesh(swGeo, swMat);
     sidewalk.rotation.x = -Math.PI / 2;
-    sidewalk.position.set(0, 0.01, frontZ + 4);
+    sidewalk.position.set(-3.5, 0.01, frontZ + 4);
     sidewalk.receiveShadow = true;
     this.streetGroup.add(sidewalk);
 
     // Stone Curb Edge along Sidewalk (Z = 17.0)
-    const curbGeo = new THREE.BoxGeometry(76, 0.22, 0.35);
+    const curbGeo = new THREE.BoxGeometry(37, 0.22, 0.35);
     const curbMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
     const curb = new THREE.Mesh(curbGeo, curbMat);
-    curb.position.set(0, 0.05, frontZ + 8);
+    curb.position.set(-3.5, 0.05, frontZ + 8);
     this.streetGroup.add(curb);
 
-    // 2. Asphalt Road with Zebra Crosswalk (Z from 17.0 to 33.0, width 80m)
-    const roadGeo = new THREE.PlaneGeometry(80, 16);
+    // 2. Asphalt Road with Zebra Crosswalk (Z: 17.0 -> 33.0, width 44m from X = -22 to +22)
+    const roadGeo = new THREE.PlaneGeometry(44, 16);
     const roadMat = new THREE.MeshStandardMaterial({
       map: this.textures.road,
       roughness: 0.85
@@ -1273,8 +1417,8 @@ class Shop3D {
     road.receiveShadow = true;
     this.streetGroup.add(road);
 
-    // 3. Opposite Sidewalk (Z from 33.0 to 38.0, width 76m)
-    const oppSwGeo = new THREE.PlaneGeometry(76, 5);
+    // 3. Opposite Sidewalk (Z: 33.0 -> 38.0, width 44m)
+    const oppSwGeo = new THREE.PlaneGeometry(44, 5);
     const oppSw = new THREE.Mesh(oppSwGeo, swMat);
     oppSw.rotation.x = -Math.PI / 2;
     oppSw.position.set(0, 0.01, frontZ + 25.5);
@@ -1305,17 +1449,30 @@ class Shop3D {
     // 11. Street Public Trash Bin (Thùng rác ngoài phố)
     this.createStreetTrashBin(-11.5, 0, frontZ + 1.5);
 
-    // 12. Opposite Town Buildings (Dãy phố đối diện sinh động)
-    this.createOppositeBuildings(frontZ);
+    // 12. Dòng sông & Bờ kè đá (River & Stone Embankments)
+    this.createRiverAndEmbankment(frontZ);
 
-    // 13. Animated Traffic Cars on Road
+    // 13. Cây cầu vòm đá (Arched Stone Bridge spanning across River)
+    this.createArchedBridge(frontZ);
+
+    // 14. Hẻm phố cổ truyền Việt Nam (Narrow Vietnamese Townhouse Alley)
+    this.createVietnameseAlley(frontZ);
+
+    // 15. Hồ nước & Thủy Tạ (Scenic Lake Park, Lotus & Lake Pavilion)
+    this.createLakeParkAndPavilion();
+
+    // 16. Nhà & Thành phố (City Buildings, Townhouses & Skyline)
+    this.createSurroundingCityBuildings(frontZ);
+
+    // 17. Animated Traffic Cars across Road & Bridge
     this.initStreetTraffic(frontZ + 16);
 
-    // 14. Pedestrians on Sidewalk
+    // 18. Pedestrians on Sidewalk & Bridge
     this.initSidewalkPedestrians(frontZ + 5.0);
 
     this.scene.add(this.streetGroup);
   }
+
 
   // Street Trees with Stone Planters and Colorful Flowers
   createStreetTreesAndFlowers(frontZ) {
@@ -1702,80 +1859,916 @@ class Shop3D {
     this.streetGroup.add(binGroup);
   }
 
-  // Opposite Town Buildings across the street (Dãy phố đối diện sinh động)
-  createOppositeBuildings(frontZ) {
-    const buildingsGroup = new THREE.Group();
-    const bZ = frontZ + 33; // 42.0
+  // 12. DÒNG SÔNG & BỜ KÈ ĐÁ (Scenic River & Stone Embankments)
+  createRiverAndEmbankment(frontZ) {
+    const riverGroup = new THREE.Group();
+    const riverMinX = -38;
+    const riverMaxX = -22;
+    const riverCenterX = (riverMinX + riverMaxX) / 2; // -30
+    const riverWidth = riverMaxX - riverMinX; // 16
+    const riverLength = 84;
+    const riverCenterZ = 30;
+    const waterY = -1.25;
 
-    const wallMatDark = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+    // 1. Water Surface Mesh with caustic reflection
+    const waterGeo = new THREE.PlaneGeometry(riverWidth, riverLength);
+    const waterMat = new THREE.MeshStandardMaterial({
+      map: this.textures.water,
+      color: 0x0284c7,
+      roughness: 0.15,
+      metalness: 0.25,
+      transparent: true,
+      opacity: 0.88
+    });
+    const riverWater = new THREE.Mesh(waterGeo, waterMat);
+    riverWater.rotation.x = -Math.PI / 2;
+    riverWater.position.set(riverCenterX, waterY, riverCenterZ);
+    riverWater.receiveShadow = true;
+    riverGroup.add(riverWater);
+    this.waterSurfaces.push(riverWater);
+
+    // River Bed (Bottom Sand/Mud)
+    const bedGeo = new THREE.PlaneGeometry(riverWidth, riverLength);
+    const bedMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.95 });
+    const riverBed = new THREE.Mesh(bedGeo, bedMat);
+    riverBed.rotation.x = -Math.PI / 2;
+    riverBed.position.set(riverCenterX, waterY - 1.2, riverCenterZ);
+    riverGroup.add(riverBed);
+
+    // 2. Stone Embankments (Bờ kè đá hai bên sông)
+    const bankWallMat = new THREE.MeshStandardMaterial({
+      map: this.textures.bridgeStone,
+      roughness: 0.8,
+      metalness: 0.1
+    });
+    const stoneRailMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 });
+    const lampPoleMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7 });
+    const warmGlowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+    [riverMaxX, riverMinX].forEach((bx, bIdx) => {
+      const isEastBank = bIdx === 0;
+      const wallNormal = isEastBank ? -1 : 1;
+
+      // Vertical Stone Retaining Wall
+      const wallMesh = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.6, riverLength), bankWallMat);
+      wallMesh.position.set(bx + wallNormal * 0.4, -0.1, riverCenterZ);
+      wallMesh.receiveShadow = true;
+      riverGroup.add(wallMesh);
+
+      // Stone Coping Curb at top of bank
+      const coping = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.25, riverLength), stoneRailMat);
+      coping.position.set(bx + wallNormal * 0.4, 0.08, riverCenterZ);
+      riverGroup.add(coping);
+
+      // Stone Balustrade (Lan can bờ kè) - broken at bridge crossing (Z from 16.5 to 33.5)
+      const balustradeSegments = [
+        { zStart: -12, zEnd: 16.5 },
+        { zStart: 33.5, zEnd: 72 }
+      ];
+
+      balustradeSegments.forEach(seg => {
+        const segLen = seg.zEnd - seg.zStart;
+        const segCenterZ = (seg.zStart + seg.zEnd) / 2;
+
+        // Top handrail
+        const handrail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, segLen), stoneRailMat);
+        handrail.position.set(bx + wallNormal * 0.2, 0.85, segCenterZ);
+        riverGroup.add(handrail);
+
+        // Baluster posts every 3.2m
+        for (let pz = seg.zStart; pz <= seg.zEnd; pz += 3.2) {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.9, 0.24), stoneRailMat);
+          post.position.set(bx + wallNormal * 0.2, 0.45, pz);
+          post.castShadow = true;
+          riverGroup.add(post);
+
+          // Classical Riverside Lanterns on selected posts
+          if (Math.abs(pz % 9.6) < 1.0) {
+            const lanternPost = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.8), lampPoleMat);
+            lanternPost.position.set(bx + wallNormal * 0.2, 1.7, pz);
+            riverGroup.add(lanternPost);
+
+            const lanternHead = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.35), warmGlowMat);
+            lanternHead.position.set(bx + wallNormal * 0.2, 2.7, pz);
+            riverGroup.add(lanternHead);
+
+            const lanternLight = new THREE.PointLight(0xfef08a, 0.85, 12, 1.5);
+            lanternLight.position.set(bx + wallNormal * 0.2, 2.7, pz);
+            riverGroup.add(lanternLight);
+          }
+        }
+      });
+
+      // Riverside Stone Landing Steps (Bậc thang đá xuống bến sông)
+      const stepsZ = isEastBank ? 8.0 : 42.0;
+      for (let s = 0; s < 5; s++) {
+        const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.24, 3.2), bankWallMat);
+        stepMesh.position.set(bx + wallNormal * (0.8 + s * 0.4), -0.15 - s * 0.22, stepsZ);
+        stepMesh.receiveShadow = true;
+        riverGroup.add(stepMesh);
+      }
+    });
+
+    // 3. Floating Vietnamese Wooden Sampan Boat (Chiếc thuyền nan mộc mạc)
+    const boat = new THREE.Group();
+    boat.position.set(-29.5, waterY + 0.15, 7.8);
+    boat.rotation.y = 0.35;
+
+    const boatWoodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
+    const darkWoodMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
+    const canopyMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.85, side: THREE.DoubleSide });
+
+    // Boat Hull (slender wooden canoe shape)
+    const hullBase = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.35, 5.2), boatWoodMat);
+    hullBase.position.y = 0.1;
+    hullBase.castShadow = true;
+    boat.add(hullBase);
+
+    // Pointed Bow (Mũi thuyền)
+    const bow = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.4, 4), boatWoodMat);
+    bow.rotation.x = -Math.PI / 2;
+    bow.position.set(0, 0.22, 3.1);
+    boat.add(bow);
+
+    // Stern (Đuôi thuyền)
+    const stern = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.2, 4), boatWoodMat);
+    stern.rotation.x = Math.PI / 2;
+    stern.position.set(0, 0.22, -3.0);
+    boat.add(stern);
+
+    // Arched Bamboo Mat Canopy (Mui thuyền lá tre)
+    const canopy = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.85, 0.85, 2.4, 16, 1, true, 0, Math.PI),
+      canopyMat
+    );
+    canopy.rotation.z = Math.PI / 2;
+    canopy.rotation.y = Math.PI / 2;
+    canopy.position.set(0, 0.45, 0.1);
+    boat.add(canopy);
+
+    // Wooden Oar (Mái chèo gác đuôi thuyền)
+    const oar = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.2), darkWoodMat);
+    oar.position.set(0.7, 0.45, -2.1);
+    oar.rotation.x = 0.5;
+    oar.rotation.z = -0.3;
+    boat.add(oar);
+
+    // Lantern hanging at the bow
+    const boatLantern = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), warmGlowMat);
+    boatLantern.position.set(0, 0.4, 3.5);
+    boat.add(boatLantern);
+
+    const bLight = new THREE.PointLight(0xfef08a, 0.7, 6);
+    bLight.position.set(0, 0.4, 3.5);
+    boat.add(bLight);
+
+    riverGroup.add(boat);
+    this.riverBoat = boat;
+
+    this.streetGroup.add(riverGroup);
+  }
+
+  // 13. CÂY CẦU VÒM ĐÁ (Arched Stone Bridge across the River)
+  createArchedBridge(frontZ) {
+    const bridgeGroup = new THREE.Group();
+    const bridgeMinX = -38;
+    const bridgeMaxX = -22;
+    const bridgeCenterX = -30;
+    const bridgeSpan = bridgeMaxX - bridgeMinX; // 16m
+    const bridgeZ = frontZ + 16; // 25.0
+    const bridgeWidth = 16.0; // Z: 17.0 -> 33.0
+
+    const stoneMat = new THREE.MeshStandardMaterial({
+      map: this.textures.bridgeStone,
+      roughness: 0.7,
+      metalness: 0.1
+    });
+    const stonePillarMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 });
+    const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const redAccentMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.5 });
+
+    // 1. Arched Bridge Road Deck (Gently curving roadway)
+    const segments = 12;
+    const deckMat = new THREE.MeshStandardMaterial({
+      map: this.textures.road,
+      roughness: 0.8
+    });
+
+    for (let i = 0; i < segments; i++) {
+      const segWidth = bridgeSpan / segments;
+      const x1 = bridgeMinX + i * segWidth;
+      const x2 = x1 + segWidth;
+      const cx = (x1 + x2) / 2;
+
+      // Parabolic arch profile
+      const t = (cx - bridgeCenterX) / (bridgeSpan / 2);
+      const archY = Math.max(0, (1 - t * t) * 0.38);
+
+      const segMesh = new THREE.Mesh(new THREE.BoxGeometry(segWidth + 0.05, 0.6, bridgeWidth), stoneMat);
+      segMesh.position.set(cx, archY - 0.25, bridgeZ);
+      segMesh.receiveShadow = true;
+      bridgeGroup.add(segMesh);
+
+      // Roadway asphalt surface on top
+      const roadTop = new THREE.Mesh(new THREE.PlaneGeometry(segWidth + 0.02, bridgeWidth - 4.0), deckMat);
+      roadTop.rotation.x = -Math.PI / 2;
+      roadTop.position.set(cx, archY + 0.06, bridgeZ);
+      roadTop.receiveShadow = true;
+      bridgeGroup.add(roadTop);
+
+      // Sidewalk walkways on north & south sides of bridge
+      const swMat = new THREE.MeshStandardMaterial({ map: this.textures.sidewalk, roughness: 0.75 });
+      [-bridgeWidth / 2 + 1.0, bridgeWidth / 2 - 1.0].forEach(sz => {
+        const swMesh = new THREE.Mesh(new THREE.PlaneGeometry(segWidth + 0.02, 2.0), swMat);
+        swMesh.rotation.x = -Math.PI / 2;
+        swMesh.position.set(cx, archY + 0.08, bridgeZ + sz);
+        bridgeGroup.add(swMesh);
+      });
+    }
+
+    // 2. Central River Pier & Cutwaters Under Bridge
+    const pierMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
+    const centralPier = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.6, bridgeWidth + 1.2), pierMat);
+    centralPier.position.set(bridgeCenterX, -0.2, bridgeZ);
+    bridgeGroup.add(centralPier);
+
+    [-bridgeWidth / 2 - 0.6, bridgeWidth / 2 + 0.6].forEach(pz => {
+      const cutwater = new THREE.Mesh(new THREE.ConeGeometry(1.6, 2.6, 4), pierMat);
+      cutwater.position.set(bridgeCenterX, -0.2, bridgeZ + pz);
+      cutwater.rotation.y = Math.PI / 4;
+      bridgeGroup.add(cutwater);
+    });
+
+    // 3. Ornate Bridge Stone Balustrades (Lan can cầu)
+    [-bridgeWidth / 2 + 0.15, bridgeWidth / 2 - 0.15].forEach(sideZ => {
+      for (let i = 0; i < segments; i++) {
+        const segWidth = bridgeSpan / segments;
+        const cx = bridgeMinX + (i + 0.5) * segWidth;
+        const t = (cx - bridgeCenterX) / (bridgeSpan / 2);
+        const archY = Math.max(0, (1 - t * t) * 0.38);
+
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(segWidth + 0.05, 0.16, 0.22), railMat);
+        rail.position.set(cx, archY + 0.95, bridgeZ + sideZ);
+        bridgeGroup.add(rail);
+
+        const baluster = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.8, 0.14), stonePillarMat);
+        baluster.position.set(cx, archY + 0.5, bridgeZ + sideZ);
+        baluster.castShadow = true;
+        bridgeGroup.add(baluster);
+      }
+    });
+
+    // 4. Four Monumental Bridgehead Lantern Pillars (Trụ cầu tứ trụ phong cách cổ kính)
+    const cornerOffsets = [
+      { x: bridgeMaxX, z: bridgeZ - bridgeWidth / 2 },
+      { x: bridgeMaxX, z: bridgeZ + bridgeWidth / 2 },
+      { x: bridgeMinX, z: bridgeZ - bridgeWidth / 2 },
+      { x: bridgeMinX, z: bridgeZ + bridgeWidth / 2 }
+    ];
+
+    cornerOffsets.forEach(pos => {
+      const pillarGroup = new THREE.Group();
+      pillarGroup.position.set(pos.x, 0, pos.z);
+
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.2, 1.1), stonePillarMat);
+      base.position.y = 0.6;
+      base.castShadow = true;
+      pillarGroup.add(base);
+
+      const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.6, 0.7), redAccentMat);
+      shaft.position.y = 2.0;
+      shaft.castShadow = true;
+      pillarGroup.add(shaft);
+
+      const pRoof = new THREE.Mesh(new THREE.ConeGeometry(0.75, 0.55, 4), stonePillarMat);
+      pRoof.position.y = 3.3;
+      pRoof.rotation.y = Math.PI / 4;
+      pillarGroup.add(pRoof);
+
+      const chamber = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.45, 0.48), lanternGlowMat);
+      chamber.position.y = 2.9;
+      pillarGroup.add(chamber);
+
+      const pLight = new THREE.PointLight(0xfef08a, 1.1, 14, 1.4);
+      pLight.position.set(0, 2.9, 0);
+      pillarGroup.add(pLight);
+
+      bridgeGroup.add(pillarGroup);
+    });
+
+    // 5. Interactive Bridge Viewpoint Hitbox
+    const viewHitbox = new THREE.Mesh(
+      new THREE.BoxGeometry(2.8, 1.6, 2.0),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    viewHitbox.position.set(bridgeCenterX, 0.9, bridgeZ - bridgeWidth / 2 + 1.2);
+    viewHitbox.userData = { type: 'bridge_view' };
+    bridgeGroup.add(viewHitbox);
+    this.interactiveObjects.push(viewHitbox);
+
+    this.streetGroup.add(bridgeGroup);
+  }
+
+  // 14. HẺM PHỐ CỔ TRUYỀN VIỆT NAM (Narrow Townhouse Alley)
+  createVietnameseAlley(frontZ) {
+    const alleyGroup = new THREE.Group();
+    const alleyX = 17.5; // center of alley
+    const alleyWidth = 4.8;
+    const alleyMinZ = frontZ; // 9.0
+    const alleyMaxZ = 43.0; // connects directly to the Lake Park!
+    const alleyLen = alleyMaxZ - alleyMinZ;
+    const alleyCenterZ = (alleyMinZ + alleyMaxZ) / 2;
+
+    const alleyWallMat = new THREE.MeshStandardMaterial({
+      map: this.textures.alleyWall,
+      roughness: 0.75,
+      metalness: 0.05
+    });
+    const stoneFloorMat = new THREE.MeshStandardMaterial({
+      map: this.textures.sidewalk,
+      roughness: 0.85
+    });
+
+    // 1. Cobblestone Pavement Floor in Alley
+    const floorGeo = new THREE.PlaneGeometry(alleyWidth, alleyLen);
+    const floor = new THREE.Mesh(floorGeo, stoneFloorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(alleyX, 0.02, alleyCenterZ);
+    floor.receiveShadow = true;
+    alleyGroup.add(floor);
+
+    // 2. Flanking Multi-Story Vietnamese Townhouses (Nhà ống phố cổ màu vàng nghệ)
+    // Left side townhouses: X = 15.1
+    const leftHouses = [
+      { z: 15, len: 10, h: 9.5, color: 0xd97706 },
+      { z: 27, len: 12, h: 12.0, color: 0xb45309 },
+      { z: 38, len: 8, h: 8.5, color: 0x92400e }
+    ];
+    leftHouses.forEach(h => {
+      const house = new THREE.Mesh(new THREE.BoxGeometry(6.0, h.h, h.len), alleyWallMat);
+      house.position.set(alleyX - alleyWidth / 2 - 3.0, h.h / 2, h.z);
+      house.receiveShadow = true;
+      house.castShadow = true;
+      alleyGroup.add(house);
+
+      // Balconies with ornate black iron railings
+      for (let by = 3.6; by < h.h - 1.5; by += 3.2) {
+        const balcony = new THREE.Mesh(
+          new THREE.BoxGeometry(0.8, 0.9, 2.2),
+          new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 })
+        );
+        balcony.position.set(alleyX - alleyWidth / 2 + 0.35, by, h.z);
+        alleyGroup.add(balcony);
+
+        // Bougainvillea flowers (Hoa giấy tím hồng rực rỡ)
+        const flowerMat = new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.7 });
+        const flowerPot = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 1.8), flowerMat);
+        flowerPot.position.set(alleyX - alleyWidth / 2 + 0.35, by + 0.5, h.z);
+        alleyGroup.add(flowerPot);
+      }
+    });
+
+    // Right side townhouses: X = 19.9
+    const rightHouses = [
+      { z: 14, len: 9, h: 11.0, color: 0xd97706 },
+      { z: 25, len: 11, h: 13.5, color: 0x78350f },
+      { z: 37, len: 11, h: 9.0, color: 0xb45309 }
+    ];
+    rightHouses.forEach(h => {
+      const house = new THREE.Mesh(new THREE.BoxGeometry(6.0, h.h, h.len), alleyWallMat);
+      house.position.set(alleyX + alleyWidth / 2 + 3.0, h.h / 2, h.z);
+      house.receiveShadow = true;
+      house.castShadow = true;
+      alleyGroup.add(house);
+
+      // Wooden French-style louvered shutter windows
+      for (let wy = 3.2; wy < h.h - 1.5; wy += 3.0) {
+        const shutterMat = new THREE.MeshStandardMaterial({ color: 0x047857 }); // Indochine green
+        const win = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 1.2), shutterMat);
+        win.position.set(alleyX + alleyWidth / 2 + 0.05, wy, h.z);
+        alleyGroup.add(win);
+      }
+    });
+
+    // 3. Overhead Crisscrossing Festive String Lights (Dây đèn lồng phố cổ lung linh)
+    const lanternColors = [0xfef08a, 0xef4444, 0x38bdf8, 0xfbbf24];
+    for (let lz = alleyMinZ + 4; lz <= alleyMaxZ - 4; lz += 4.5) {
+      const wireMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
+      const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, alleyWidth * 1.05), wireMat);
+      wire.rotation.z = Math.PI / 2;
+      wire.position.set(alleyX, 4.2, lz);
+      alleyGroup.add(wire);
+
+      // 3 hanging glowing lanterns on each wire
+      [-alleyWidth * 0.3, 0, alleyWidth * 0.3].forEach((ox, li) => {
+        const lColor = lanternColors[(Math.floor(lz) + li) % lanternColors.length];
+        const lanternMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.18, 8, 8),
+          new THREE.MeshBasicMaterial({ color: lColor })
+        );
+        lanternMesh.position.set(alleyX + ox, 3.85, lz);
+        lanternMesh.scale.set(1, 1.3, 1);
+        alleyGroup.add(lanternMesh);
+
+        if (li === 1 && lz % 9 < 5) {
+          const sLight = new THREE.PointLight(lColor, 0.7, 7, 1.8);
+          sLight.position.set(alleyX, 3.7, lz);
+          alleyGroup.add(sLight);
+        }
+      });
+    }
+
+    // 4. Vietnamese Street Food Cart (Xe đẩy Bánh mì & Nước mía vỉa hè)
+    const cartX = alleyX + 1.2;
+    const cartZ = 18.0;
+    const cart = new THREE.Group();
+    cart.position.set(cartX, 0, cartZ);
+
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.1 });
+    const blueMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 });
+
+    const cartBody = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 0.9), steelMat);
+    cartBody.position.y = 0.55;
+    cartBody.castShadow = true;
+    cart.add(cartBody);
+
+    const showcase = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 0.8), glassMat);
+    showcase.position.set(0, 1.3, 0);
+    cart.add(showcase);
+
+    const breadMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.7 });
+    for (let bi = -0.5; bi <= 0.5; bi += 0.25) {
+      const loaf = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.32, 8), breadMat);
+      loaf.rotation.z = Math.PI / 2;
+      loaf.position.set(bi, 1.15, 0);
+      cart.add(loaf);
+    }
+
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.6), steelMat);
+    pole.position.set(0.7, 1.3, 0);
+    cart.add(pole);
+
+    const umbrella = new THREE.Mesh(new THREE.ConeGeometry(1.4, 0.6, 8), blueMat);
+    umbrella.position.set(0.7, 2.5, 0);
+    cart.add(umbrella);
+
+    const stoolMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 });
+    [-0.8, -1.3].forEach(sx => {
+      const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.32, 12), stoolMat);
+      stool.position.set(sx, 0.16, 0.6);
+      cart.add(stool);
+    });
+
+    const signGeo = new THREE.PlaneGeometry(1.4, 0.25);
+    const signTex = new THREE.CanvasTexture((() => {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 64;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(0, 0, 256, 64);
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🥖 BÁNH MÌ NÓNG', 128, 42);
+      return c;
+    })());
+    const cartSign = new THREE.Mesh(signGeo, new THREE.MeshBasicMaterial({ map: signTex }));
+    cartSign.position.set(0, 0.95, 0.46);
+    cart.add(cartSign);
+
+    const hitBox = new THREE.Mesh(
+      new THREE.BoxGeometry(2.0, 1.8, 1.6),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.position.y = 0.9;
+    hitBox.userData = { type: 'alley_food' };
+    cart.add(hitBox);
+    this.interactiveObjects.push(hitBox);
+
+    alleyGroup.add(cart);
+
+    this.streetGroup.add(alleyGroup);
+  }
+
+  // 15. HỒ NƯỚC & THỦY TẠ (Scenic Lake Park, Lotus & Lake Pavilion)
+  createLakeParkAndPavilion() {
+    const lakeGroup = new THREE.Group();
+    const parkMinX = 5.0;
+    const parkMaxX = 36.0;
+    const parkMinZ = 42.0;
+    const parkMaxZ = 68.0;
+    const parkWidth = parkMaxX - parkMinX; // 31m
+    const parkLength = parkMaxZ - parkMinZ; // 26m
+    const parkCenterX = (parkMinX + parkMaxX) / 2; // 20.5
+    const parkCenterZ = (parkMinZ + parkMaxZ) / 2; // 55.0
+
+    const lakeMinX = 8.5;
+    const lakeMaxX = 33.5;
+    const lakeMinZ = 45.0;
+    const lakeMaxZ = 65.0;
+    const lakeCenterX = 21.0;
+    const lakeCenterZ = 55.0;
+    const lakeWaterY = -0.4;
+
+    const grassMat = new THREE.MeshStandardMaterial({
+      map: this.textures.parkGrass,
+      roughness: 0.9
+    });
+    const stonePathMat = new THREE.MeshStandardMaterial({
+      map: this.textures.sidewalk,
+      roughness: 0.8
+    });
+    const lakeWallMat = new THREE.MeshStandardMaterial({
+      map: this.textures.bridgeStone,
+      roughness: 0.8
+    });
+
+    // 1. Lush Green Lawn Ground
+    const groundGeo = new THREE.PlaneGeometry(parkWidth + 8, parkLength + 8);
+    const ground = new THREE.Mesh(groundGeo, grassMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(parkCenterX, -0.02, parkCenterZ);
+    ground.receiveShadow = true;
+    lakeGroup.add(ground);
+
+    // 2. Lake Water Basin
+    const waterW = lakeMaxX - lakeMinX; // 25m
+    const waterL = lakeMaxZ - lakeMinZ; // 20m
+    const lakeWaterGeo = new THREE.PlaneGeometry(waterW, waterL);
+    const lakeWaterMat = new THREE.MeshStandardMaterial({
+      map: this.textures.water,
+      color: 0x0369a1,
+      roughness: 0.12,
+      metalness: 0.2,
+      transparent: true,
+      opacity: 0.9
+    });
+    const lakeWater = new THREE.Mesh(lakeWaterGeo, lakeWaterMat);
+    lakeWater.rotation.x = -Math.PI / 2;
+    lakeWater.position.set(lakeCenterX, lakeWaterY, lakeCenterZ);
+    lakeWater.receiveShadow = true;
+    lakeGroup.add(lakeWater);
+    this.waterSurfaces.push(lakeWater);
+
+    // Stone Embankment around lake perimeter
+    const curbH = 0.55;
+    const curbThick = 0.8;
+    const sWall = new THREE.Mesh(new THREE.BoxGeometry(waterW + 1.6, curbH, curbThick), lakeWallMat);
+    sWall.position.set(lakeCenterX, -0.15, lakeMinZ);
+    lakeGroup.add(sWall);
+
+    const nWall = new THREE.Mesh(new THREE.BoxGeometry(waterW + 1.6, curbH, curbThick), lakeWallMat);
+    nWall.position.set(lakeCenterX, -0.15, lakeMaxZ);
+    lakeGroup.add(nWall);
+
+    const wWall = new THREE.Mesh(new THREE.BoxGeometry(curbThick, curbH, waterL), lakeWallMat);
+    wWall.position.set(lakeMinX, -0.15, lakeCenterZ);
+    lakeGroup.add(wWall);
+
+    const eWall = new THREE.Mesh(new THREE.BoxGeometry(curbThick, curbH, waterL), lakeWallMat);
+    eWall.position.set(lakeMaxX, -0.15, lakeCenterZ);
+    lakeGroup.add(eWall);
+
+    // 3. Floating Lotus Pads & Pink Lotus Flowers (Hoa sen & lá sen bồng bềnh)
+    this.lotusMeshes = [];
+    const lotusMat = new THREE.MeshStandardMaterial({
+      map: this.textures.lotus,
+      transparent: true,
+      roughness: 0.4
+    });
+    const lotusPositions = [
+      { x: 13, z: 49, s: 1.4 },
+      { x: 15, z: 52, s: 1.1 },
+      { x: 12, z: 61, s: 1.5 },
+      { x: 27, z: 48, s: 1.3 },
+      { x: 29, z: 53, s: 1.6 },
+      { x: 28, z: 62, s: 1.2 },
+      { x: 24, z: 63, s: 1.4 },
+      { x: 16, z: 46, s: 1.2 }
+    ];
+
+    lotusPositions.forEach(lp => {
+      const lotusPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.6 * lp.s, 1.6 * lp.s), lotusMat);
+      lotusPlane.rotation.x = -Math.PI / 2;
+      lotusPlane.rotation.z = Math.random() * Math.PI * 2;
+      lotusPlane.position.set(lp.x, lakeWaterY + 0.02, lp.z);
+      lakeGroup.add(lotusPlane);
+      this.lotusMeshes.push(lotusPlane);
+    });
+
+    // 4. Weeping Willow Trees along Park Promenade (Cây Liễu rủ ven hồ)
+    const willowPositions = [
+      { x: 7.2, z: 46 },
+      { x: 7.2, z: 58 },
+      { x: 34.5, z: 46 },
+      { x: 34.5, z: 59 },
+      { x: 20.5, z: 66.5 }
+    ];
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 });
+
+    willowPositions.forEach(pos => {
+      const tree = new THREE.Group();
+      tree.position.set(pos.x, 0, pos.z);
+
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.35, 4.2, 8), trunkMat);
+      trunk.position.y = 2.1;
+      trunk.rotation.z = (Math.random() - 0.5) * 0.2;
+      tree.add(trunk);
+
+      const crown = new THREE.Mesh(new THREE.SphereGeometry(1.8, 8, 8), leafMat);
+      crown.position.y = 4.2;
+      crown.scale.set(1.4, 0.9, 1.4);
+      tree.add(crown);
+
+      for (let w = 0; w < 10; w++) {
+        const ang = (w / 10) * Math.PI * 2;
+        const rad = 1.3 + (w % 2) * 0.4;
+        const vine = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.02, 2.2, 6), leafMat);
+        vine.position.set(Math.cos(ang) * rad, 3.1, Math.sin(ang) * rad);
+        vine.rotation.x = (Math.random() - 0.5) * 0.2;
+        tree.add(vine);
+      }
+
+      lakeGroup.add(tree);
+    });
+
+    // 5. Wooden Footbridge to Central Lake Pavilion (Cầu gỗ dẫn ra Thủy Tạ)
+    const bridgeStartX = 20.0;
+    const bridgeStartZ = lakeMinZ - 1.5; // 43.5
+    const bridgeEndZ = 52.0;
+    const bridgeLen = bridgeEndZ - bridgeStartZ; // 8.5m
+    const bridgeW = 2.4;
+
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.7 });
+    const darkWoodMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.85 });
+
+    const wDeck = new THREE.Mesh(new THREE.BoxGeometry(bridgeW, 0.18, bridgeLen), woodMat);
+    wDeck.position.set(bridgeStartX, 0.15, (bridgeStartZ + bridgeEndZ) / 2);
+    wDeck.receiveShadow = true;
+    lakeGroup.add(wDeck);
+
+    for (let bz = bridgeStartZ + 1.8; bz <= bridgeEndZ - 0.5; bz += 2.2) {
+      [-bridgeW / 2 + 0.2, bridgeW / 2 - 0.2].forEach(bx => {
+        const stilt = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2), darkWoodMat);
+        stilt.position.set(bridgeStartX + bx, -0.3, bz);
+        lakeGroup.add(stilt);
+      });
+    }
+
+    [-bridgeW / 2 + 0.1, bridgeW / 2 - 0.1].forEach(rx => {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, bridgeLen), darkWoodMat);
+      rail.position.set(bridgeStartX + rx, 0.85, (bridgeStartZ + bridgeEndZ) / 2);
+      lakeGroup.add(rail);
+
+      for (let pz = bridgeStartZ; pz <= bridgeEndZ; pz += 1.8) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.75, 0.12), darkWoodMat);
+        post.position.set(bridgeStartX + rx, 0.45, pz);
+        lakeGroup.add(post);
+      }
+    });
+
+    // 6. Hexagonal Lake Pavilion (Thủy Tạ Ngắm Sen cổ truyền)
+    const pavX = bridgeStartX; // 20.0
+    const pavZ = 55.5;
+    const pavY = 0.15;
+    const pavR = 3.6; // radius
+
+    const pavGroup = new THREE.Group();
+    pavGroup.position.set(pavX, pavY, pavZ);
+
+    const redPillarMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.5 });
+    const tileRoofMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.6 });
+    const goldFinialMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.8, roughness: 0.2 });
+
+    const pavFloor = new THREE.Mesh(
+      new THREE.CylinderGeometry(pavR, pavR + 0.2, 0.35, 6),
+      woodMat
+    );
+    pavFloor.position.y = 0.1;
+    pavFloor.receiveShadow = true;
+    pavGroup.add(pavFloor);
+
+    const pavBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(pavR - 0.2, pavR, 1.2, 6),
+      lakeWallMat
+    );
+    pavBase.position.y = -0.6;
+    pavGroup.add(pavBase);
+
+    for (let c = 0; c < 6; c++) {
+      const ang = (c / 6) * Math.PI * 2;
+      const colX = Math.cos(ang) * (pavR - 0.5);
+      const colZ = Math.sin(ang) * (pavR - 0.5);
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 3.2, 8), redPillarMat);
+      col.position.set(colX, 1.6, colZ);
+      col.castShadow = true;
+      pavGroup.add(col);
+    }
+
+    const roof1 = new THREE.Mesh(new THREE.ConeGeometry(pavR + 0.8, 1.2, 6), tileRoofMat);
+    roof1.position.y = 3.5;
+    roof1.castShadow = true;
+    pavGroup.add(roof1);
+
+    const roof2 = new THREE.Mesh(new THREE.ConeGeometry(pavR - 0.6, 1.4, 6), tileRoofMat);
+    roof2.position.y = 4.4;
+    roof2.castShadow = true;
+    pavGroup.add(roof2);
+
+    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), goldFinialMat);
+    finial.position.y = 5.25;
+    pavGroup.add(finial);
+
+    for (let l = 0; l < 6; l++) {
+      const ang = (l / 6) * Math.PI * 2 + Math.PI / 6;
+      const lx = Math.cos(ang) * (pavR + 0.3);
+      const lz = Math.sin(ang) * (pavR + 0.3);
+      const lantern = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xef4444 })
+      );
+      lantern.position.set(lx, 2.9, lz);
+      lantern.scale.set(1, 1.25, 1);
+      pavGroup.add(lantern);
+    }
+
+    const pavLight = new THREE.PointLight(0xfef08a, 1.3, 12, 1.2);
+    pavLight.position.set(0, 2.6, 0);
+    pavGroup.add(pavLight);
+
+    const table = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.7, 0.6, 0.7, 12),
+      stonePathMat
+    );
+    table.position.y = 0.55;
+    pavGroup.add(table);
+
+    for (let st = 0; st < 4; st++) {
+      const sang = (st / 4) * Math.PI * 2;
+      const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.42, 8), stonePathMat);
+      stool.position.set(Math.cos(sang) * 1.3, 0.4, Math.sin(sang) * 1.3);
+      pavGroup.add(stool);
+    }
+
+    const hitBox = new THREE.Mesh(
+      new THREE.BoxGeometry(4.2, 2.5, 4.2),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.position.y = 1.2;
+    hitBox.userData = { type: 'lake_pavilion' };
+    pavGroup.add(hitBox);
+    this.interactiveObjects.push(hitBox);
+
+    lakeGroup.add(pavGroup);
+
+    this.streetGroup.add(lakeGroup);
+  }
+
+  // 16. NHÀ & THÀNH PHỐ (Surrounding City Buildings & Distant Skyline)
+  createSurroundingCityBuildings(frontZ) {
+    const buildingsGroup = new THREE.Group();
     const roofMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5 });
 
-    // Building Specs across the street
-    const specs = [
+    // 1. Opposite Shophouses along North side of Avenue (Z: 41.5)
+    // Carefully arranged so they DO NOT block the alley (X in [15.0, 20.5])
+    const shophouseSpecs = [
       {
-        x: -22, w: 12, h: 14, d: 8,
+        x: -18, w: 7, h: 14, d: 7.5,
         color: 0x334155, title: 'CĂN HỘ PHỐ MỚI',
         facadeTex: null
       },
       {
-        x: -9, w: 10, h: 8, d: 8,
+        x: -10, w: 7, h: 8.5, d: 7.5,
         color: 0x78350f, title: 'CÀ PHÊ PHỐ CỔ',
         facadeTex: this.textures.cafeFacade
       },
       {
-        x: 1, w: 8, h: 7.5, d: 8,
+        x: -3, w: 6.5, h: 8, d: 7.5,
         color: 0x059669, title: 'HIỆU THUỐC 24/7',
         facadeTex: this.textures.pharmacyFacade
       },
       {
-        x: 10, w: 8, h: 7, d: 8,
+        x: 4.5, w: 7.5, h: 7.5, d: 7.5,
         color: 0xd97706, title: 'TIỆM BÁNH MÌ',
         facadeTex: this.textures.bakeryFacade
       },
       {
-        x: 21, w: 12, h: 12, d: 8,
+        x: 11.5, w: 5.5, h: 10.5, d: 7.5,
+        color: 0x475569, title: 'KHÁCH SẠN PHỐ CỔ',
+        facadeTex: null
+      },
+      // (Alley opening at X in [15.0, 20.5])
+      {
+        x: 24.5, w: 7.5, h: 12.0, d: 7.5,
         color: 0x0284c7, title: 'TÒA NHÀ THƯƠNG MẠI',
+        facadeTex: null
+      },
+      {
+        x: 32.5, w: 7.5, h: 15.0, d: 7.5,
+        color: 0x1e293b, title: 'TRUNG TÂM TÀI CHÍNH',
         facadeTex: null
       }
     ];
 
-    specs.forEach(s => {
+    shophouseSpecs.forEach(s => {
       const bMesh = new THREE.Mesh(
         new THREE.BoxGeometry(s.w, s.h, s.d),
         new THREE.MeshStandardMaterial({ color: s.color, roughness: 0.7 })
       );
-      bMesh.position.set(s.x, s.h / 2, bZ);
+      bMesh.position.set(s.x, s.h / 2, frontZ + 32.5);
       bMesh.receiveShadow = true;
+      bMesh.castShadow = true;
       buildingsGroup.add(bMesh);
 
-      // Storefront / Facade Texture on Front Wall
       if (s.facadeTex) {
         const facadePlane = new THREE.Mesh(
-          new THREE.PlaneGeometry(s.w - 0.4, 5.5),
+          new THREE.PlaneGeometry(s.w - 0.4, 5.2),
           new THREE.MeshBasicMaterial({ map: s.facadeTex })
         );
-        facadePlane.position.set(s.x, 3.2, bZ - s.d / 2 - 0.05);
+        facadePlane.position.set(s.x, 3.0, frontZ + 32.5 - s.d / 2 - 0.05);
         facadePlane.rotation.y = Math.PI;
         buildingsGroup.add(facadePlane);
       } else {
-        // Upper floor illuminated warm windows
-        for (let wy = 3.5; wy < s.h - 1.5; wy += 2.4) {
-          for (let wx = -s.w / 2 + 1.8; wx <= s.w / 2 - 1.8; wx += 2.4) {
+        for (let wy = 3.2; wy < s.h - 1.2; wy += 2.4) {
+          for (let wx = -s.w / 2 + 1.4; wx <= s.w / 2 - 1.4; wx += 2.0) {
             const win = new THREE.Mesh(
-              new THREE.PlaneGeometry(1.2, 1.4),
+              new THREE.PlaneGeometry(1.0, 1.3),
               new THREE.MeshBasicMaterial({ color: (Math.random() > 0.3) ? 0xfef08a : 0x1e293b })
             );
-            win.position.set(s.x + wx, wy, bZ - s.d / 2 - 0.05);
+            win.position.set(s.x + wx, wy, frontZ + 32.5 - s.d / 2 - 0.05);
             win.rotation.y = Math.PI;
             buildingsGroup.add(win);
           }
         }
       }
 
-      // Roof Overhang Rim
-      const roof = new THREE.Mesh(new THREE.BoxGeometry(s.w + 0.6, 0.4, s.d + 0.6), roofMat);
-      roof.position.set(s.x, s.h + 0.2, bZ);
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(s.w + 0.4, 0.35, s.d + 0.4), roofMat);
+      roof.position.set(s.x, s.h + 0.18, frontZ + 32.5);
       buildingsGroup.add(roof);
+    });
+
+    // 2. West Riverbank City Townhouses (Bờ tây sông)
+    const westBuildings = [
+      { x: -44, z: 12, w: 7, h: 12, d: 8, color: 0x334155 },
+      { x: -44, z: 22, w: 7, h: 16, d: 9, color: 0x0f172a },
+      { x: -44, z: 34, w: 7, h: 10, d: 8, color: 0xd97706 }
+    ];
+    westBuildings.forEach(wb => {
+      const bMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(wb.w, wb.h, wb.d),
+        new THREE.MeshStandardMaterial({ color: wb.color, roughness: 0.7 })
+      );
+      bMesh.position.set(wb.x, wb.h / 2, wb.z);
+      bMesh.receiveShadow = true;
+      buildingsGroup.add(bMesh);
+
+      for (let wy = 3.0; wy < wb.h - 1.5; wy += 2.4) {
+        for (let wz = -wb.d / 2 + 1.5; wz <= wb.d / 2 - 1.5; wz += 2.2) {
+          const win = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.1, 1.3),
+            new THREE.MeshBasicMaterial({ color: (Math.random() > 0.25) ? 0xfef08a : 0x1e293b })
+          );
+          win.position.set(wb.x + wb.w / 2 + 0.05, wy, wb.z + wz);
+          win.rotation.y = Math.PI / 2;
+          buildingsGroup.add(win);
+        }
+      }
+    });
+
+    // 3. Distant City Skyline Silhouettes (Cao ốc chọc trời hậu cảnh)
+    const skylineZ = 85.0;
+    const skylineSpecs = [
+      { x: -35, w: 14, h: 38, d: 10, color: 0x0f172a },
+      { x: -18, w: 12, h: 46, d: 10, color: 0x1e293b },
+      { x: 0, w: 16, h: 52, d: 12, color: 0x0f172a },
+      { x: 18, w: 12, h: 42, d: 10, color: 0x1e293b },
+      { x: 35, w: 15, h: 36, d: 10, color: 0x0f172a }
+    ];
+    skylineSpecs.forEach(sky => {
+      const skyMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sky.w, sky.h, sky.d),
+        new THREE.MeshStandardMaterial({ color: sky.color, roughness: 0.85 })
+      );
+      skyMesh.position.set(sky.x, sky.h / 2, skylineZ);
+      buildingsGroup.add(skyMesh);
+
+      for (let y = 6; y < sky.h - 4; y += 3.5) {
+        for (let x = -sky.w / 2 + 1.8; x <= sky.w / 2 - 1.8; x += 2.2) {
+          if (Math.random() > 0.45) {
+            const wPlane = new THREE.Mesh(
+              new THREE.PlaneGeometry(1.2, 1.6),
+              new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+            );
+            wPlane.position.set(sky.x + x, y, skylineZ - sky.d / 2 - 0.05);
+            wPlane.rotation.y = Math.PI;
+            buildingsGroup.add(wPlane);
+          }
+        }
+      }
     });
 
     this.streetGroup.add(buildingsGroup);
@@ -2516,7 +3509,7 @@ class Shop3D {
     }
   }
 
-  // FIRST-PERSON PLAYER MOVEMENT & COLLISION (Seamless Indoor & Outdoor Walk)
+  // FIRST-PERSON PLAYER MOVEMENT & COLLISION (Seamless City, River Bridge, Alley & Lake Park Walk)
   updatePlayerMovement(dt) {
     if (this.viewMode !== 'fps') return;
 
@@ -2539,12 +3532,12 @@ class Shop3D {
     // Keyboard rotation helper with Q
     if (p.keys.q) p.yaw += 2.2 * dt;
 
-    // Speed boost timer from energy drink
+    // Speed boost timer from energy drink or banh mi
     if (p.speedBoostTimer > 0) {
       p.speedBoostTimer -= dt;
       if (p.speedBoostTimer <= 0) {
         p.speedBoostTimer = 0;
-        this.game.log('⚡ Hiệu ứng Nước tăng lực đã hết.');
+        this.game.log('⚡ Hiệu ứng Tăng Tốc Độ Di Chuyển đã hết.');
       }
     }
 
@@ -2562,23 +3555,25 @@ class Shop3D {
       const doorMaxX = -6.4;
       const wallZ = this.storeDepth / 2; // 9.0
 
-      // 1. Z-axis transition logic:
+      // 1. Z-axis & In/Out Store Boundary Logic:
       let newZ = targetZ;
+      let newX = targetX;
+
       if (p.pos.z <= wallZ) {
         // Player currently inside store
         if (targetZ > wallZ) {
           // Attempting to step outside: allowed ONLY if in doorway
           if (p.pos.x >= doorMinX && p.pos.x <= doorMaxX) {
-            newZ = Math.min(23.5, targetZ); // Walk out onto sidewalk & street!
+            newZ = targetZ; // Walk out onto sidewalk & street!
           } else {
             newZ = Math.min(wallZ - 0.2, targetZ); // Blocked by front glass wall
           }
         } else {
-          // Inside back wall collision
+          // Inside store back wall collision
           newZ = Math.max(-this.storeDepth / 2 + 1.2, targetZ);
         }
       } else {
-        // Player currently outside on sidewalk / street
+        // Player currently outside in the expansive city!
         if (targetZ < wallZ) {
           // Attempting to re-enter store: allowed ONLY if in doorway
           if (p.pos.x >= doorMinX && p.pos.x <= doorMaxX) {
@@ -2587,25 +3582,75 @@ class Shop3D {
             newZ = Math.max(wallZ + 0.2, targetZ); // Blocked by storefront glass
           }
         } else {
-          // Max outdoor street depth
-          newZ = Math.min(23.5, targetZ);
+          // Max outdoor city depth (Lake park far boundary)
+          newZ = Math.min(67.0, targetZ);
         }
       }
 
-      // 2. X-axis bounds logic:
-      let newX = targetX;
+      // 2. Zone-Specific Collisions & Boundaries
       if (newZ <= wallZ) {
         // Inside store width boundaries
         const minX = -this.storeWidth / 2 + 1.2; // -10.8
         const maxX = this.storeWidth / 2 - 1.2;  // 10.8
         newX = Math.max(minX, Math.min(maxX, targetX));
       } else {
-        // Outside sidewalk & street width
-        newX = Math.max(-28.0, Math.min(28.0, targetX));
+        // Outside in city:
+        // Overall city X-bounds
+        newX = Math.max(-43.0, Math.min(35.5, targetX));
+
+        // River Safety Check: River is at X in [-38, -22].
+        // Player can ONLY cross if on the Bridge (Z in [16.5, 33.5])!
+        if (newX < -22.0 && newX > -38.0) {
+          if (newZ < 16.5 || newZ > 33.5) {
+            if (p.pos.x >= -22.0) newX = -22.0;
+            else if (p.pos.x <= -38.0) newX = -38.0;
+            else newZ = Math.max(16.5, Math.min(33.5, newZ));
+          }
+        }
+
+        // Alley & Lake Entrance Constraints:
+        // North of the main street sidewalk (Z > 38.0):
+        if (newZ > 38.0) {
+          if (newZ <= 42.0) {
+            // Must be within the alley corridor
+            newX = Math.max(15.0, Math.min(20.2, newX));
+          } else {
+            // Inside Lake Park (Z in [42.0, 67.0], X in [5.0, 35.5])
+            newX = Math.max(5.0, Math.min(35.5, newX));
+
+            // Lake Water Safety Check:
+            // Deep water is at X in [8.5, 33.5], Z in [44.5, 65.5].
+            // Player is allowed on the Wooden Footbridge & Lake Pavilion: X in [18.2, 21.8], Z in [43.5, 58.5].
+            const inWaterBox = (newX > 8.5 && newX < 33.5 && newZ > 44.5 && newZ < 65.5);
+            const onBridgeOrPavilion = (newX >= 18.2 && newX <= 21.8 && newZ >= 43.5 && newZ <= 58.5);
+
+            if (inWaterBox && !onBridgeOrPavilion) {
+              // Constrain to nearest promenade edge
+              if (p.pos.z <= 44.5) newZ = 44.5;
+              else if (p.pos.z >= 65.5) newZ = 65.5;
+              else if (p.pos.x <= 8.5) newX = 8.5;
+              else if (p.pos.x >= 33.5) newX = 33.5;
+              else {
+                newX = Math.max(18.5, Math.min(21.5, newX));
+              }
+            }
+          }
+        }
       }
 
       p.pos.x = newX;
       p.pos.z = newZ;
+    }
+
+    // Dynamic Elevation (Smooth Bridge Arch curve when crossing)
+    if (p.pos.x <= -22.0 && p.pos.x >= -38.0 && p.pos.z >= 16.5 && p.pos.z <= 33.5) {
+      const bridgeCenter = -30.0;
+      const bridgeHalfSpan = 8.0;
+      const t = Math.abs(p.pos.x - bridgeCenter) / bridgeHalfSpan;
+      const archH = Math.max(0, (1 - t * t) * 0.38);
+      p.pos.y = 1.65 + archH;
+    } else {
+      p.pos.y = 1.65;
     }
 
     // Update FPS Camera position and rotation
@@ -2652,6 +3697,12 @@ class Shop3D {
           promptText.innerText = 'Kiện hàng giao tới: Xếp nhanh lên kệ [E] 📦';
         } else if (data.type === 'outdoor_trash') {
           promptText.innerText = 'Dọn rác trước tiệm [E] 🧹';
+        } else if (data.type === 'bridge_view') {
+          promptText.innerText = 'Đứng trên cầu ngắm dòng sông thơ mộng [E] 🌉';
+        } else if (data.type === 'alley_food') {
+          promptText.innerText = 'Xe bánh mì hẻm phố: Ăn bánh mì giòn tan [E] 🥖';
+        } else if (data.type === 'lake_pavilion') {
+          promptText.innerText = 'Thủy Tạ: Ngắm hoa sen giữa hồ nước [E] 🪷';
         }
       }
     } else {
@@ -2720,6 +3771,23 @@ class Shop3D {
       this.game.cleanliness = Math.min(100, this.game.cleanliness + 8);
       this.game.addFloatingText('🧹 Vỉa hè sạch bong!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#34d399');
       this.game.log('🧹 Bạn đã thu dọn rác trước cửa tiệm, vỉa hè sạch sẽ thu hút người đi bộ!');
+      this.game.updateStatsUI();
+    } else if (targetData.type === 'bridge_view') {
+      if (window.gameAudio) gameAudio.playClick();
+      this.game.reputation = Math.min(100, this.game.reputation + 3);
+      this.game.addFloatingText('🌉 Ngắm sông: +3 Uy tín!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#38bdf8');
+      this.game.log('🌉 Bạn tựa vào lan can cầu đá ngắm nhìn dòng sông lấp lánh và con thuyền nan bồng bềnh. Cảm xúc thanh thản, tiệm nhận +3 Uy tín!');
+      this.game.updateStatsUI();
+    } else if (targetData.type === 'alley_food') {
+      if (window.gameAudio) gameAudio.playChaChing();
+      this.player.speedBoostTimer = 40;
+      this.game.addFloatingText('🥖 BÁNH MÌ GIÒN TAN: +TỐC ĐỘ CHẠY!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#f59e0b');
+      this.game.log('🥖 Bạn ghé xe bánh mì đầu hẻm ăn một ổ bánh mì chả nóng giòn rụm! Tốc độ di chuyển tăng 40% trong 40 giây!');
+    } else if (targetData.type === 'lake_pavilion') {
+      if (window.gameAudio) gameAudio.playChaChing();
+      this.game.reputation = Math.min(100, this.game.reputation + 5);
+      this.game.addFloatingText('🪷 Thư giãn ngắm sen: +5 Uy tín!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#ec4899');
+      this.game.log('🪷 Bạn ngồi nghỉ chân trong Thủy Tạ giữa hồ sen thanh bình, ngắm nhìn những đóa sen hồng ngát hương. Uy tín tăng thêm +5 điểm!');
       this.game.updateStatsUI();
     }
   }
@@ -2913,7 +3981,7 @@ class Shop3D {
     }
   }
 
-  // HUD OVERLAYS & CAMERA BUTTONS
+  // HUD OVERLAYS & CAMERA BUTTONS (Indoor, Outdoor Street, Bridge & River, Lake Park, Alley)
   setupHUDOverlays() {
     const toolbar = document.createElement('div');
     toolbar.className = 'camera-toolbar-3d';
@@ -2924,6 +3992,15 @@ class Shop3D {
       </button>
       <button id="btn-view-outdoor" class="cam-btn-view cam-btn-outdoor" title="Xem nhanh toàn cảnh phố xá bên ngoài">
         🌳 Ngoài phố
+      </button>
+      <button id="btn-view-bridge" class="cam-btn-view cam-btn-bridge" title="Xem nhanh Cây Cầu Đá & Dòng Sông thơ mộng">
+        🌉 Cầu & Sông
+      </button>
+      <button id="btn-view-lake" class="cam-btn-view cam-btn-lake" title="Xem nhanh Hồ Nước & Thủy Tạ ngắm hoa sen">
+        🪷 Hồ nước
+      </button>
+      <button id="btn-view-alley" class="cam-btn-view cam-btn-alley" title="Xem nhanh Hẻm Phố Cổ truyền Việt Nam">
+        🏘️ Hẻm phố
       </button>
       <button id="btn-toggle-camera-mode" class="cam-btn" title="Chuyển đổi giữa góc nhìn Quản lý 3D và Góc nhìn thứ nhất (Phím V)">
         🔄 Đổi góc nhìn [Phím V]
@@ -2955,7 +4032,7 @@ class Shop3D {
     hint.innerHTML = `⌨️ <b>Phím Mũi tên [↑ ↓ ← →] / WASD:</b> Di chuyển | <b>[Space] / [Enter] / [E]:</b> Tương tác | <b>[V]:</b> Đổi góc nhìn`;
     this.container.appendChild(hint);
 
-    // Click: Smooth glide to indoor store view
+    // 1. Click: Smooth glide to indoor store view
     document.getElementById('btn-view-indoor').onclick = () => {
       this.transitionToView(
         new THREE.Vector3(0, 18, 19),
@@ -2965,13 +4042,43 @@ class Shop3D {
       );
     };
 
-    // Click: Smooth glide to outdoor street view
+    // 2. Click: Smooth glide to outdoor street view
     document.getElementById('btn-view-outdoor').onclick = () => {
       this.transitionToView(
         new THREE.Vector3(-2, 14, 27),
         new THREE.Vector3(-2, 1.0, 13),
         'btn-view-outdoor',
         '🎥 Đang xem toàn cảnh Phố Xá Bên Ngoài!'
+      );
+    };
+
+    // 3. Click: Smooth glide to Bridge & River view
+    document.getElementById('btn-view-bridge').onclick = () => {
+      this.transitionToView(
+        new THREE.Vector3(-30, 15, 42),
+        new THREE.Vector3(-30, 0.5, 25),
+        'btn-view-bridge',
+        '🌉 Đang ngắm Cây Cầu Đá bắc qua Dòng Sông thơ mộng!'
+      );
+    };
+
+    // 4. Click: Smooth glide to Lake Park & Lotus Pavilion view
+    document.getElementById('btn-view-lake').onclick = () => {
+      this.transitionToView(
+        new THREE.Vector3(20, 18, 75),
+        new THREE.Vector3(20, 1.5, 54),
+        'btn-view-lake',
+        '🪷 Đang xem Hồ Sen & Thủy Tạ thanh tịnh!'
+      );
+    };
+
+    // 5. Click: Smooth glide to Alley view
+    document.getElementById('btn-view-alley').onclick = () => {
+      this.transitionToView(
+        new THREE.Vector3(17.5, 13, 38),
+        new THREE.Vector3(17.5, 1.5, 24),
+        'btn-view-alley',
+        '🏘️ Đang xem Hẻm Phố Cổ lung linh ánh đèn!'
       );
     };
 
@@ -3113,6 +4220,26 @@ class Shop3D {
     });
   }
 
+  // Water ripples, boat bobbing and lotus swaying animation
+  updateWaterAnimation(dt) {
+    if (this.textures && this.textures.water) {
+      this.textures.water.offset.y += dt * 0.035;
+      this.textures.water.offset.x += dt * 0.012;
+    }
+    if (this.riverBoat) {
+      const t = Date.now() / 900;
+      this.riverBoat.position.y = -1.1 + Math.sin(t) * 0.045;
+      this.riverBoat.rotation.z = Math.sin(t * 0.9) * 0.035;
+      this.riverBoat.rotation.x = Math.cos(t * 0.7) * 0.02;
+    }
+    if (this.lotusMeshes && this.lotusMeshes.length > 0) {
+      const now = Date.now() / 1100;
+      this.lotusMeshes.forEach((lotus, idx) => {
+        lotus.position.y = -0.38 + Math.sin(now + idx) * 0.012;
+      });
+    }
+  }
+
   // MAIN RENDER LOOP (Called every frame from game.loop)
   update(dt) {
     if (this.cameraTransition && this.cameraTransition.isTransitioning) {
@@ -3141,6 +4268,7 @@ class Shop3D {
     this.updateSlidingDoors(dt);
     this.updateStreetTraffic(dt);
     this.updateSidewalkPedestrians(dt);
+    this.updateWaterAnimation(dt);
     this.syncSimulationEntities(dt);
   }
 
