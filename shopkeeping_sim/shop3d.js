@@ -604,13 +604,175 @@ class Shop3D {
     grTex.repeat.set(8, 8);
     grTex.needsUpdate = true;
     this.textures.parkGrass = grTex;
+
+    // 17. Highway Mountain Tunnel Curved Wall with Hazard Stripes
+    const twCanvas = document.createElement('canvas');
+    twCanvas.width = 512;
+    twCanvas.height = 512;
+    const twCtx = twCanvas.getContext('2d');
+    
+    // Concrete & Glossy White/Off-white Ceramic Wall Tiles
+    twCtx.fillStyle = '#e2e8f0';
+    twCtx.fillRect(0, 0, 512, 512);
+
+    const tileW = 64;
+    const tileH = 32;
+    for (let ty = 0; ty < 512; ty += tileH) {
+      const isShift = (ty / tileH) % 2 === 1;
+      for (let tx = isShift ? -tileW / 2 : 0; tx < 512 + tileW; tx += tileW) {
+        twCtx.fillStyle = (tx + ty) % 3 === 0 ? '#f8fafc' : '#f1f5f9';
+        twCtx.fillRect(tx + 1, ty + 1, tileW - 2, tileH - 2);
+        twCtx.strokeStyle = 'rgba(100, 116, 139, 0.25)';
+        twCtx.lineWidth = 1.5;
+        twCtx.strokeRect(tx + 1, ty + 1, tileW - 2, tileH - 2);
+      }
+    }
+
+    // Top exhaust smoke/soot grime zone
+    const sootGrad = twCtx.createLinearGradient(0, 0, 0, 90);
+    sootGrad.addColorStop(0, 'rgba(15, 23, 42, 0.85)');
+    sootGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+    twCtx.fillStyle = sootGrad;
+    twCtx.fillRect(0, 0, 512, 90);
+
+    // Bottom Safety Yellow-Black Diagonal Hazard Chevron Band (height 90px)
+    const bandY = 422;
+    const bandH = 90;
+    twCtx.fillStyle = '#f59e0b';
+    twCtx.fillRect(0, bandY, 512, bandH);
+
+    twCtx.fillStyle = '#0f172a';
+    const stripeGap = 40;
+    for (let sx = -bandH; sx < 512 + bandH; sx += stripeGap) {
+      twCtx.beginPath();
+      twCtx.moveTo(sx, bandY + bandH);
+      twCtx.lineTo(sx + 20, bandY + bandH);
+      twCtx.lineTo(sx + 20 + bandH, bandY);
+      twCtx.lineTo(sx + bandH, bandY);
+      twCtx.closePath();
+      twCtx.fill();
+    }
+
+    // Top & Bottom Red Warning Line
+    twCtx.fillStyle = '#ef4444';
+    twCtx.fillRect(0, bandY, 512, 4);
+    twCtx.fillRect(0, bandY + bandH - 4, 512, 4);
+
+    const twTex = new THREE.CanvasTexture(twCanvas);
+    twTex.wrapS = THREE.RepeatWrapping;
+    twTex.wrapT = THREE.RepeatWrapping;
+    twTex.repeat.set(6, 2);
+    twTex.needsUpdate = true;
+    this.textures.tunnelWall = twTex;
+
+    // 18. Highway Tunnel Entrance Overhead Portal Sign
+    const tsCanvas = document.createElement('canvas');
+    tsCanvas.width = 1024;
+    tsCanvas.height = 256;
+    const tsCtx = tsCanvas.getContext('2d');
+
+    // Emerald Green Express Highway Sign Board
+    tsCtx.fillStyle = '#065f46';
+    tsCtx.fillRect(0, 0, 1024, 256);
+
+    // White reflective border
+    tsCtx.strokeStyle = '#ffffff';
+    tsCtx.lineWidth = 10;
+    tsCtx.strokeRect(16, 16, 992, 224);
+
+    // Main Portal Header
+    tsCtx.fillStyle = '#ffffff';
+    tsCtx.font = '900 68px "Outfit", sans-serif';
+    tsCtx.textAlign = 'center';
+    tsCtx.fillText('🚇 HẦM ĐƯỜNG BỘ THÀNH PHỐ', 512, 95);
+
+    // Subtext & clearance gauge
+    tsCtx.fillStyle = '#fef08a';
+    tsCtx.font = 'bold 36px "Nunito", sans-serif';
+    tsCtx.fillText('CHIỀU CAO TỐI ĐA 4.5M  •  BẬT ĐÈN CHIẾU GẦN  •  GIỮ KHOẢNG CÁCH', 512, 160);
+
+    // Electronic Speed Limit & Radio Channel Badges
+    tsCtx.fillStyle = '#ef4444';
+    tsCtx.beginPath();
+    tsCtx.arc(140, 175, 42, 0, Math.PI * 2);
+    tsCtx.fill();
+    tsCtx.fillStyle = '#ffffff';
+    tsCtx.beginPath();
+    tsCtx.arc(140, 175, 34, 0, Math.PI * 2);
+    tsCtx.fill();
+    tsCtx.fillStyle = '#0f172a';
+    tsCtx.font = '900 36px sans-serif';
+    tsCtx.fillText('50', 140, 187);
+
+    tsCtx.fillStyle = '#38bdf8';
+    tsCtx.font = 'bold 30px monospace';
+    tsCtx.fillText('FM 91.0 MHz', 880, 187);
+
+    const tsTex = new THREE.CanvasTexture(tsCanvas);
+    tsTex.needsUpdate = true;
+    this.textures.tunnelPortalSign = tsTex;
+
+    // 19. Modern Glass Skyscraper Reflective Facade
+    const gfCanvas = document.createElement('canvas');
+    gfCanvas.width = 512;
+    gfCanvas.height = 512;
+    const gfCtx = gfCanvas.getContext('2d');
+
+    gfCtx.fillStyle = '#0f172a';
+    gfCtx.fillRect(0, 0, 512, 512);
+
+    const gCols = 8;
+    const gRows = 16;
+    const gw = 512 / gCols;
+    const gh = 512 / gRows;
+
+    for (let r = 0; r < gRows; r++) {
+      for (let c = 0; c < gCols; c++) {
+        const gx = c * gw;
+        const gy = r * gh;
+
+        // Gradient glass reflection
+        const glassGrad = gfCtx.createLinearGradient(gx, gy, gx + gw, gy + gh);
+        if ((r + c) % 5 === 0) {
+          glassGrad.addColorStop(0, '#38bdf8');
+          glassGrad.addColorStop(1, '#0284c7');
+        } else if ((r + c) % 3 === 0) {
+          glassGrad.addColorStop(0, '#0284c7');
+          glassGrad.addColorStop(1, '#0c4a6e');
+        } else {
+          glassGrad.addColorStop(0, '#0369a1');
+          glassGrad.addColorStop(1, '#082f49');
+        }
+
+        gfCtx.fillStyle = glassGrad;
+        gfCtx.fillRect(gx + 2, gy + 2, gw - 4, gh - 4);
+
+        // Office interior warm light in some windows
+        if ((r * 7 + c * 13) % 9 === 0) {
+          gfCtx.fillStyle = 'rgba(254, 240, 138, 0.45)';
+          gfCtx.fillRect(gx + 6, gy + gh * 0.4, gw - 12, gh * 0.4);
+        }
+
+        // Aluminum frame lines
+        gfCtx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+        gfCtx.lineWidth = 1.5;
+        gfCtx.strokeRect(gx + 1, gy + 1, gw - 2, gh - 2);
+      }
+    }
+
+    const gfTex = new THREE.CanvasTexture(gfCanvas);
+    gfTex.wrapS = THREE.RepeatWrapping;
+    gfTex.wrapT = THREE.RepeatWrapping;
+    gfTex.repeat.set(3, 8);
+    gfTex.needsUpdate = true;
+    this.textures.glassFacade = gfTex;
   }
 
   setupScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#0b1120');
     // Panoramic city depth with scenic atmosphere
-    this.scene.fog = new THREE.Fog('#0b1120', 35, 145);
+    this.scene.fog = new THREE.Fog('#0b1120', 45, 230);
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -633,7 +795,7 @@ class Shop3D {
     const aspect = this.container.clientWidth / this.container.clientHeight;
 
     // 1. Isometric / Management Camera (Top-down tilted with full city panoramic range)
-    this.isoCamera = new THREE.PerspectiveCamera(45, aspect, 0.5, 300);
+    this.isoCamera = new THREE.PerspectiveCamera(45, aspect, 0.5, 450);
     this.isoCamera.position.set(0, 18, 19);
     this.isoCamera.lookAt(0, 1.2, 0);
 
@@ -644,12 +806,12 @@ class Shop3D {
       this.controls.dampingFactor = 0.08;
       this.controls.maxPolarAngle = Math.PI / 2.05;
       this.controls.minDistance = 5;
-      this.controls.maxDistance = 110; // Extended zoom to view entire city, river & lake
+      this.controls.maxDistance = 160; // Extended zoom to view entire city, river, tunnel & lake
       this.controls.target.set(0, 1.2, 0);
     }
 
     // 2. First-Person FPS Camera
-    this.fpsCamera = new THREE.PerspectiveCamera(72, aspect, 0.1, 250);
+    this.fpsCamera = new THREE.PerspectiveCamera(72, aspect, 0.1, 350);
     this.fpsCamera.position.copy(this.player.pos);
     this.fpsCamera.lookAt(0, 1.65, -5);
 
@@ -662,15 +824,15 @@ class Shop3D {
     const ambient = new THREE.AmbientLight(0xfff6ea, 0.78);
     this.scene.add(ambient);
 
-    // Directional Sunlight covering entire expansive city, river, bridge and lake
+    // Directional Sunlight covering entire expansive city, river, bridge, tunnel and lake
     const sunLight = new THREE.DirectionalLight(0xffffff, 0.88);
     sunLight.position.set(15, 36, 25);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 1024;
     sunLight.shadow.mapSize.height = 1024;
     sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 135;
-    const d = 48;
+    sunLight.shadow.camera.far = 180;
+    const d = 75;
     sunLight.shadow.camera.left = -d;
     sunLight.shadow.camera.right = d;
     sunLight.shadow.camera.top = d;
@@ -1405,23 +1567,23 @@ class Shop3D {
     curb.position.set(-3.5, 0.05, frontZ + 8);
     this.streetGroup.add(curb);
 
-    // 2. Asphalt Road with Zebra Crosswalk (Z: 17.0 -> 33.0, width 44m from X = -22 to +22)
-    const roadGeo = new THREE.PlaneGeometry(44, 16);
+    // 2. Asphalt Highway Avenue (Z: 17.0 -> 33.0, width 148m from X = -85 to +63)
+    const roadGeo = new THREE.PlaneGeometry(148, 16);
     const roadMat = new THREE.MeshStandardMaterial({
       map: this.textures.road,
       roughness: 0.85
     });
     const road = new THREE.Mesh(roadGeo, roadMat);
     road.rotation.x = -Math.PI / 2;
-    road.position.set(0, -0.06, frontZ + 16);
+    road.position.set(-11, -0.06, frontZ + 16);
     road.receiveShadow = true;
     this.streetGroup.add(road);
 
-    // 3. Opposite Sidewalk (Z: 33.0 -> 38.0, width 44m)
-    const oppSwGeo = new THREE.PlaneGeometry(44, 5);
+    // 3. Opposite North Sidewalk (Z: 33.0 -> 38.0, width 148m from X = -85 to +63)
+    const oppSwGeo = new THREE.PlaneGeometry(148, 5);
     const oppSw = new THREE.Mesh(oppSwGeo, swMat);
     oppSw.rotation.x = -Math.PI / 2;
-    oppSw.position.set(0, 0.01, frontZ + 25.5);
+    oppSw.position.set(-11, 0.01, frontZ + 25.5);
     oppSw.receiveShadow = true;
     this.streetGroup.add(oppSw);
 
@@ -1464,10 +1626,16 @@ class Shop3D {
     // 16. Nhà & Thành phố (City Buildings, Townhouses & Skyline)
     this.createSurroundingCityBuildings(frontZ);
 
-    // 17. Animated Traffic Cars across Road & Bridge
+    // 17. Đường Hầm Đô Thị Xuyên Núi (Highway Mountain Tunnel: X in [-80, -50])
+    this.createHighwayTunnel(frontZ);
+
+    // 18. Khu Đô Thị Cao Ốc Phía Đông (East Modern High-Rise District: X in [15, 62])
+    this.createEastDistrict(frontZ);
+
+    // 19. Animated Traffic Cars across Road, Bridge & Mountain Tunnel
     this.initStreetTraffic(frontZ + 16);
 
-    // 18. Pedestrians on Sidewalk & Bridge
+    // 20. Pedestrians on Sidewalk & Bridge
     this.initSidewalkPedestrians(frontZ + 5.0);
 
     this.scene.add(this.streetGroup);
@@ -2774,21 +2942,554 @@ class Shop3D {
     this.streetGroup.add(buildingsGroup);
   }
 
+  // 17. ĐƯỜNG HẦM ĐÔ THỊ XUYÊN NÚI (Highway Mountain Tunnel: X in [-80, -50])
+  createHighwayTunnel(frontZ) {
+    const tunnelGroup = new THREE.Group();
+    const roadZ = frontZ + 16; // 25.0
+    const roadW = 16.0;        // Z: 17.0 -> 33.0
+    const tunnelLen = 30.0;    // X from -80 to -50
+    const tunnelCenterX = -65.0;
+    const eastPortalX = -50.0;
+    const westPortalX = -80.0;
+
+    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.7, metalness: 0.1 });
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.95 });
+    const mossRockMat = new THREE.MeshStandardMaterial({ color: 0x1f382b, roughness: 0.9 });
+    const warningYellowMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+    const sodiumGlowMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+    const greenSignalMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+
+    // 1. ROCKY MOUNTAIN RIDGE ABOVE TUNNEL (Núi đá sừng sững cao 16m)
+    const mountainCrags = [
+      { x: -65, y: 8, z: 25, sx: 32, sy: 16, sz: 28, mat: rockMat },
+      { x: -63, y: 7, z: 38, sx: 30, sy: 14, sz: 18, mat: mossRockMat },
+      { x: -66, y: 6.5, z: 12, sx: 30, sy: 13, sz: 16, mat: rockMat },
+      { x: -50.5, y: 6, z: 35.5, sx: 6, sy: 12, sz: 8, mat: rockMat },
+      { x: -50.5, y: 6, z: 14.5, sx: 6, sy: 12, sz: 8, mat: rockMat },
+      { x: -79.5, y: 6, z: 35.5, sx: 6, sy: 12, sz: 8, mat: rockMat },
+      { x: -79.5, y: 6, z: 14.5, sx: 6, sy: 12, sz: 8, mat: rockMat },
+      { x: -68, y: 14, z: 23, sx: 16, sy: 6, sz: 16, mat: rockMat },
+      { x: -58, y: 13, z: 27, sx: 14, sy: 5.5, sz: 15, mat: mossRockMat }
+    ];
+
+    mountainCrags.forEach(c => {
+      const rock = new THREE.Mesh(new THREE.BoxGeometry(c.sx, c.sy, c.sz), c.mat);
+      rock.position.set(c.x, c.y, c.z);
+      rock.receiveShadow = true;
+      rock.castShadow = true;
+      tunnelGroup.add(rock);
+    });
+
+    // Mountain Pine Trees on top of ridge
+    const pineMat = new THREE.MeshStandardMaterial({ color: 0x064e3b, roughness: 0.8 });
+    const pineTrunkMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
+    const pinePositions = [
+      { x: -72, y: 16.0, z: 22 },
+      { x: -64, y: 17.0, z: 25 },
+      { x: -56, y: 15.8, z: 28 },
+      { x: -62, y: 14.0, z: 36 },
+      { x: -68, y: 13.0, z: 13 },
+      { x: -52, y: 12.0, z: 33 },
+      { x: -52, y: 12.0, z: 17 }
+    ];
+
+    pinePositions.forEach(p => {
+      const tree = new THREE.Group();
+      tree.position.set(p.x, p.y, p.z);
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 2.2), pineTrunkMat);
+      trunk.position.y = 1.1;
+      tree.add(trunk);
+
+      [
+        { r: 1.8, h: 2.2, y: 2.5 },
+        { r: 1.4, h: 1.9, y: 3.8 },
+        { r: 0.9, h: 1.6, y: 4.9 }
+      ].forEach(tier => {
+        const foliage = new THREE.Mesh(new THREE.ConeGeometry(tier.r, tier.h, 7), pineMat);
+        foliage.position.y = tier.y;
+        foliage.castShadow = true;
+        tree.add(foliage);
+      });
+
+      tunnelGroup.add(tree);
+    });
+
+    // 2. CONCRETE TUNNEL PORTAL ENTRANCES (East & West Portals)
+    [eastPortalX, westPortalX].forEach((px, pIdx) => {
+      const isEast = (pIdx === 0);
+      const portalFacingSign = isEast ? 1 : -1;
+      const portalGroup = new THREE.Group();
+      portalGroup.position.set(px, 0, roadZ);
+
+      // Left and Right Portal Abutment Columns
+      [-roadW / 2 - 1.2, roadW / 2 + 1.2].forEach(colZ => {
+        const col = new THREE.Mesh(new THREE.BoxGeometry(2.4, 7.8, 2.4), concreteMat);
+        col.position.set(0, 3.9, colZ);
+        col.castShadow = true;
+        col.receiveShadow = true;
+        portalGroup.add(col);
+
+        // Flashing Amber Warning Beacon on top of pillar
+        const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.35, 12), warningYellowMat);
+        beacon.position.set(0, 8.0, colZ);
+        portalGroup.add(beacon);
+
+        const beaconLight = new THREE.PointLight(0xf59e0b, 0.8, 8);
+        beaconLight.position.set(0, 8.2, colZ);
+        portalGroup.add(beaconLight);
+      });
+
+      // Overhead Portal Concrete Arch Beam
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.4, roadW + 4.8), concreteMat);
+      lintel.position.set(0, 6.7, 0);
+      lintel.castShadow = true;
+      portalGroup.add(lintel);
+
+      // Portal Parapet Crest on top
+      const parapet = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.6, roadW + 5.2), concreteMat);
+      parapet.position.set(0, 8.1, 0);
+      portalGroup.add(parapet);
+
+      // Grand Overhead Green Highway Sign Board
+      const signMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(13.5, 2.1),
+        new THREE.MeshBasicMaterial({ map: this.textures.tunnelPortalSign })
+      );
+      signMesh.rotation.y = isEast ? Math.PI / 2 : -Math.PI / 2;
+      signMesh.position.set(portalFacingSign * 1.15, 6.6, 0);
+      portalGroup.add(signMesh);
+
+      // 2 Spotlights illuminating the portal highway sign
+      [-4.0, 4.0].forEach(sz => {
+        const spot = new THREE.SpotLight(0xfffaed, 1.4, 8, Math.PI / 4, 0.4);
+        spot.position.set(portalFacingSign * 3.5, 8.2, sz);
+        spot.target.position.set(0, 6.6, sz);
+        portalGroup.add(spot);
+        portalGroup.add(spot.target);
+      });
+
+      // Electronic Lane Signals (Green Down-Arrows) hanging below arch beam
+      [-3.5, 3.5].forEach(lz => {
+        const sigBox = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.7, 0.7), darkMat);
+        sigBox.position.set(portalFacingSign * 0.9, 5.2, lz);
+        portalGroup.add(sigBox);
+
+        const sigLamp = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), greenSignalMat);
+        sigLamp.rotation.y = isEast ? Math.PI / 2 : -Math.PI / 2;
+        sigLamp.position.set(portalFacingSign * 1.06, 5.2, lz);
+        portalGroup.add(sigLamp);
+      });
+
+      // Yellow-Black Striped Height Clearance Barrier Bar (4.5M)
+      const barrierBar = new THREE.Mesh(
+        new THREE.BoxGeometry(0.15, 0.22, roadW),
+        new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 })
+      );
+      barrierBar.position.set(portalFacingSign * 0.6, 4.8, 0);
+      portalGroup.add(barrierBar);
+
+      // Support hangers
+      [-roadW / 2 + 1.0, roadW / 2 - 1.0].forEach(hz => {
+        const hanger = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.7), darkMat);
+        hanger.position.set(portalFacingSign * 0.6, 5.15, hz);
+        portalGroup.add(hanger);
+      });
+
+      tunnelGroup.add(portalGroup);
+    });
+
+    // 3. TUNNEL INTERIOR TUBE (X in [-80, -50], Z in [17, 33])
+    // Curved/Vaulted Ceiling
+    const ceilingGeo = new THREE.CylinderGeometry(8.2, 8.2, tunnelLen, 24, 1, true, 0, Math.PI);
+    const ceilingMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.9,
+      side: THREE.BackSide
+    });
+    const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
+    ceiling.rotation.z = Math.PI / 2;
+    ceiling.position.set(tunnelCenterX, 1.2, roadZ);
+    tunnelGroup.add(ceiling);
+
+    // North & South Tiled Side Walls with Hazard Stripes
+    const wallGeo = new THREE.PlaneGeometry(tunnelLen, 4.8);
+    const wallMat = new THREE.MeshStandardMaterial({
+      map: this.textures.tunnelWall,
+      roughness: 0.45,
+      metalness: 0.1
+    });
+
+    // North Wall (Z = 33.0)
+    const nWall = new THREE.Mesh(wallGeo, wallMat);
+    nWall.position.set(tunnelCenterX, 2.4, roadZ + roadW / 2);
+    nWall.rotation.y = Math.PI;
+    tunnelGroup.add(nWall);
+
+    // South Wall (Z = 17.0)
+    const sWall = new THREE.Mesh(wallGeo, wallMat);
+    sWall.position.set(tunnelCenterX, 2.4, roadZ - roadW / 2);
+    tunnelGroup.add(sWall);
+
+    // Dual Linear Continuous Sodium Glow Tubes along tunnel ceiling
+    [-roadW / 4, roadW / 4].forEach(lz => {
+      const tubeGeo = new THREE.BoxGeometry(tunnelLen, 0.12, 0.22);
+      const tube = new THREE.Mesh(tubeGeo, sodiumGlowMat);
+      tube.position.set(tunnelCenterX, 5.1, roadZ + lz);
+      tunnelGroup.add(tube);
+    });
+
+    // 4 Warm Sodium Overhead Lights inside Tunnel
+    [-54, -62, -70, -78].forEach(lx => {
+      const sLight = new THREE.PointLight(0xfbbf24, 1.35, 24, 1.2);
+      sLight.position.set(lx, 4.8, roadZ);
+      tunnelGroup.add(sLight);
+    });
+
+    // Industrial Jet Ventilation Fans (6 quạt thông gió phản lực treo trần)
+    const fanMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.2 });
+    const fanCowlMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.4 });
+    const fanBracketMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6 });
+
+    [-56, -65, -74].forEach(fx => {
+      [-roadW / 4, roadW / 4].forEach(fz => {
+        const fanGroup = new THREE.Group();
+        fanGroup.position.set(fx, 4.9, roadZ + fz);
+
+        const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.6, 0.3), fanBracketMat);
+        bracket.position.y = 0.3;
+        fanGroup.add(bracket);
+
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 2.2, 16), fanMat);
+        barrel.rotation.z = Math.PI / 2;
+        fanGroup.add(barrel);
+
+        [-1.0, 1.0].forEach(ox => {
+          const cowl = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.24, 16), fanCowlMat);
+          cowl.rotation.z = Math.PI / 2;
+          cowl.position.x = ox;
+          fanGroup.add(cowl);
+        });
+
+        tunnelGroup.add(fanGroup);
+      });
+    });
+
+    // 4. RAISED PEDESTRIAN SAFETY SIDEWALK & GUARD RAILING INSIDE TUNNEL (South Walkway: Z in [17.5, 19.5])
+    const walkW = 2.0;
+    const walkZ = roadZ - roadW / 2 + walkW / 2; // 18.0
+    const walkwayGeo = new THREE.BoxGeometry(tunnelLen + 4, 0.24, walkW);
+    const walkway = new THREE.Mesh(walkwayGeo, concreteMat);
+    walkway.position.set(tunnelCenterX, 0.12, walkZ);
+    walkway.receiveShadow = true;
+    tunnelGroup.add(walkway);
+
+    // Yellow Steel Safety Guard Railing along walkway edge
+    const railMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4, metalness: 0.3 });
+    const railGeo = new THREE.BoxGeometry(tunnelLen, 0.08, 0.08);
+    const topRail = new THREE.Mesh(railGeo, railMat);
+    topRail.position.set(tunnelCenterX, 0.95, walkZ + walkW / 2);
+    tunnelGroup.add(topRail);
+
+    const midRail = new THREE.Mesh(railGeo, railMat);
+    midRail.position.set(tunnelCenterX, 0.55, walkZ + walkW / 2);
+    tunnelGroup.add(midRail);
+
+    for (let rx = -79; rx <= -51; rx += 2.8) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.85), railMat);
+      post.position.set(rx, 0.55, walkZ + walkW / 2);
+      tunnelGroup.add(post);
+    }
+
+    // Emergency Telephone Call Box (SOS ☎️) on Tunnel Wall
+    const sosGroup = new THREE.Group();
+    sosGroup.position.set(-65, 1.6, roadZ - roadW / 2 + 0.15);
+
+    const sosBox = new THREE.Mesh(
+      new THREE.BoxGeometry(0.8, 1.2, 0.35),
+      new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.3 })
+    );
+    sosGroup.add(sosBox);
+
+    const sosSignTex = new THREE.CanvasTexture((() => {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(0, 0, 256, 128);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 48px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('SOS ☎️', 128, 70);
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText('CỨU HỘ KHẨN CẤP', 128, 105);
+      return c;
+    })());
+    const sosFace = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.45), new THREE.MeshBasicMaterial({ map: sosSignTex }));
+    sosFace.position.set(0, 0.25, 0.18);
+    sosGroup.add(sosFace);
+
+    const sosBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    sosBeacon.position.set(0, 0.7, 0.1);
+    sosGroup.add(sosBeacon);
+
+    const sosLight = new THREE.PointLight(0x38bdf8, 0.8, 4);
+    sosLight.position.set(0, 0.7, 0.3);
+    sosGroup.add(sosLight);
+
+    tunnelGroup.add(sosGroup);
+
+    // 5. INTERACTIVE HITBOX: TUNNEL ECHO (Thử tiếng vọng đường hầm)
+    const echoHitbox = new THREE.Mesh(
+      new THREE.BoxGeometry(3.5, 2.2, 2.5),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    echoHitbox.position.set(-65, 1.2, walkZ);
+    echoHitbox.userData = { type: 'tunnel_echo' };
+    tunnelGroup.add(echoHitbox);
+    this.interactiveObjects.push(echoHitbox);
+
+    this.streetGroup.add(tunnelGroup);
+  }
+
+  // 18. KHU ĐÔ THỊ CAO ỐC PHÍA ĐÔNG (East Modern High-Rise District: X in [15, 62])
+  createEastDistrict(frontZ) {
+    const eastGroup = new THREE.Group();
+
+    const glassMat = new THREE.MeshStandardMaterial({
+      map: this.textures.glassFacade,
+      roughness: 0.15,
+      metalness: 0.45
+    });
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+    const concreteMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+    const plazaFloorMat = new THREE.MeshStandardMaterial({
+      map: this.textures.sidewalk,
+      roughness: 0.75
+    });
+    const cyanNeonMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const redLightMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
+    // 1. EXTENDED EAST PEDESTRIAN BOULEVARD & METRO PLAZA
+    // South East Sidewalk (Z: 9.0 -> 17.0, X: 15 to 62)
+    const sPlazaGeo = new THREE.PlaneGeometry(47, 8);
+    const sPlaza = new THREE.Mesh(sPlazaGeo, plazaFloorMat);
+    sPlaza.rotation.x = -Math.PI / 2;
+    sPlaza.position.set(38.5, 0.01, frontZ + 4);
+    sPlaza.receiveShadow = true;
+    eastGroup.add(sPlaza);
+
+    // North East Sidewalk (Z: 33.0 -> 40.0, X: 36 to 62)
+    const nPlazaGeo = new THREE.PlaneGeometry(26, 7);
+    const nPlaza = new THREE.Mesh(nPlazaGeo, plazaFloorMat);
+    nPlaza.rotation.x = -Math.PI / 2;
+    nPlaza.position.set(49, 0.01, frontZ + 27.5);
+    nPlaza.receiveShadow = true;
+    eastGroup.add(nPlaza);
+
+    // Stone Curb along South East Sidewalk (Z = 17.0)
+    const eCurb = new THREE.Mesh(new THREE.BoxGeometry(47, 0.22, 0.35), concreteMat);
+    eCurb.position.set(38.5, 0.05, frontZ + 8);
+    eastGroup.add(eCurb);
+
+    // Modern LED Avenue Light Poles along East District
+    [24, 34, 44, 54].forEach(px => {
+      const poleGroup = new THREE.Group();
+      poleGroup.position.set(px, 0, frontZ + 7.6);
+
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 6.0, 8), concreteMat);
+      pole.position.y = 3.0;
+      poleGroup.add(pole);
+
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.08), concreteMat);
+      arm.position.set(-0.4, 5.9, 0);
+      arm.rotation.z = 0.2;
+      poleGroup.add(arm);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 0.25), cyanNeonMat);
+      head.position.set(-1.0, 5.8, 0);
+      poleGroup.add(head);
+
+      const pLight = new THREE.PointLight(0xe0f2fe, 1.2, 18, 1.3);
+      pLight.position.set(-1.0, 5.6, 0);
+      poleGroup.add(pLight);
+
+      eastGroup.add(poleGroup);
+    });
+
+    // 2. METRO STATION CANOPY ("Ga Tàu Điện Ngầm Phố Đông")
+    const metroGroup = new THREE.Group();
+    metroGroup.position.set(26.0, 0, 13.0);
+
+    // Glass Canopy Arch Frame
+    const canopyMat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      transparent: true,
+      opacity: 0.65,
+      roughness: 0.1
+    });
+    const canopyRoof = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.4, 2.4, 5.5, 16, 1, true, 0, Math.PI),
+      canopyMat
+    );
+    canopyRoof.rotation.z = Math.PI / 2;
+    canopyRoof.position.set(0, 2.6, 0);
+    metroGroup.add(canopyRoof);
+
+    // Chrome Arches
+    [-2.5, 0, 2.5].forEach(ax => {
+      const arch = new THREE.Mesh(
+        new THREE.TorusGeometry(2.45, 0.06, 8, 20, Math.PI),
+        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85 })
+      );
+      arch.rotation.y = Math.PI / 2;
+      arch.position.set(ax, 2.6, 0);
+      metroGroup.add(arch);
+    });
+
+    // Metro Entrance Steps Pit
+    const pitMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+    const pit = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.4, 3.2), pitMat);
+    pit.position.set(0, 0.1, 0);
+    metroGroup.add(pit);
+
+    // Glowing escalator steps
+    for (let st = 0; st < 6; st++) {
+      const step = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.15, 0.4), cyanNeonMat);
+      step.position.set(-1.5 + st * 0.5, 0.15 - st * 0.1, 0);
+      metroGroup.add(step);
+    }
+
+    // Metro Station Signboard
+    const metroSignTex = new THREE.CanvasTexture((() => {
+      const c = document.createElement('canvas');
+      c.width = 512;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(0, 0, 512, 128);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 44px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🚇 GA PHỐ ĐÔNG', 256, 60);
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillStyle = '#7dd3fc';
+      ctx.fillText('METRO LINE 01 • BẾN THÀNH - SUỐI TIÊN', 256, 100);
+      return c;
+    })());
+    const mSign = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.9), new THREE.MeshBasicMaterial({ map: metroSignTex }));
+    mSign.position.set(0, 3.4, 2.2);
+    metroGroup.add(mSign);
+
+    const mLight = new THREE.PointLight(0x38bdf8, 1.2, 8);
+    mLight.position.set(0, 2.8, 0);
+    metroGroup.add(mLight);
+
+    eastGroup.add(metroGroup);
+
+    // Contemporary Sculpture Monument in Plaza
+    const sculptGroup = new THREE.Group();
+    sculptGroup.position.set(34.0, 0, 13.0);
+    const ringMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.05 });
+    const sPedestal = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.4, 0.8, 12), concreteMat);
+    sPedestal.position.y = 0.4;
+    sculptGroup.add(sPedestal);
+
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.18, 16, 32), ringMat);
+    ring.position.y = 2.4;
+    ring.rotation.x = 0.35;
+    ring.rotation.y = 0.7;
+    sculptGroup.add(ring);
+
+    const scLight = new THREE.PointLight(0x38bdf8, 0.9, 6);
+    scLight.position.set(0, 2.4, 0);
+    sculptGroup.add(scLight);
+
+    eastGroup.add(sculptGroup);
+
+    // 3. DAZZLING GLASS SKYSCRAPERS (Tòa cao ốc chọc trời hiện đại)
+    const towers = [
+      {
+        x: 46, z: 39, w: 14, d: 10, h: 36,
+        name: 'PHỐ ĐÔNG FINANCIAL', crownH: 3.5
+      },
+      {
+        x: 57, z: 25, w: 13, d: 13, h: 48,
+        name: 'SKYLINE LANDMARK TOWER', hasSpire: true, crownH: 4.5
+      },
+      {
+        x: 44, z: 8, w: 12, d: 9, h: 28,
+        name: 'TECH INNOVATION HUB', crownH: 2.5
+      },
+      {
+        x: 56, z: 8, w: 11, d: 9, h: 32,
+        name: 'EAST RIVERVIEW', crownH: 3.0
+      }
+    ];
+
+    towers.forEach(t => {
+      const towerGroup = new THREE.Group();
+      towerGroup.position.set(t.x, 0, t.z);
+
+      const body = new THREE.Mesh(new THREE.BoxGeometry(t.w, t.h, t.d), glassMat);
+      body.position.y = t.h / 2;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      towerGroup.add(body);
+
+      const podium = new THREE.Mesh(new THREE.BoxGeometry(t.w + 0.8, 4.0, t.d + 0.8), frameMat);
+      podium.position.y = 2.0;
+      podium.receiveShadow = true;
+      towerGroup.add(podium);
+
+      const crown = new THREE.Mesh(new THREE.BoxGeometry(t.w - 1.2, t.crownH, t.d - 1.2), frameMat);
+      crown.position.y = t.h + t.crownH / 2;
+      crown.castShadow = true;
+      towerGroup.add(crown);
+
+      const logoStrip = new THREE.Mesh(new THREE.BoxGeometry(t.w - 1.4, 1.2, t.d - 1.0), cyanNeonMat);
+      logoStrip.position.y = t.h + t.crownH * 0.4;
+      towerGroup.add(logoStrip);
+
+      if (t.hasSpire) {
+        const spire = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.08, 0.35, 12.0, 8),
+          new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9 })
+        );
+        spire.position.y = t.h + t.crownH + 6.0;
+        towerGroup.add(spire);
+
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), redLightMat);
+        beacon.position.y = t.h + t.crownH + 12.1;
+        towerGroup.add(beacon);
+
+        const bLight = new THREE.PointLight(0xef4444, 1.5, 30);
+        bLight.position.y = t.h + t.crownH + 12.2;
+        towerGroup.add(bLight);
+      }
+
+      eastGroup.add(towerGroup);
+    });
+
+    this.streetGroup.add(eastGroup);
+  }
+
   // Initialize Animated Street Traffic (Xe cộ qua lại trên đường)
   initStreetTraffic(roadZ) {
     this.trafficCars = [];
 
     // Helper to build low-poly vehicle model
-    const createCarModel = (bodyColor, isTaxi = false, isVan = false) => {
+    const createCarModel = (bodyColor, isTaxi = false, isVan = false, isBus = false) => {
       const car = new THREE.Group();
       const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.3, metalness: 0.3 });
       const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, opacity: 0.7, transparent: true });
       const wheelMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.7 });
       const lightMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
 
-      const carLen = isVan ? 5.2 : 4.4;
-      const carWid = isVan ? 2.1 : 1.9;
-      const carHgt = isVan ? 2.4 : 1.4;
+      const carLen = isBus ? 7.6 : (isVan ? 5.2 : 4.4);
+      const carWid = isBus ? 2.4 : (isVan ? 2.1 : 1.9);
+      const carHgt = isBus ? 2.9 : (isVan ? 2.4 : 1.4);
 
       // Lower Chassis
       const chassis = new THREE.Mesh(new THREE.BoxGeometry(carLen, 0.6, carWid), bodyMat);
@@ -2797,14 +3498,14 @@ class Shop3D {
       car.add(chassis);
 
       // Cabin / Greenhouse
-      const cabinLen = isVan ? 3.8 : 2.5;
+      const cabinLen = isBus ? 6.8 : (isVan ? 3.8 : 2.5);
       const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinLen, carHgt * 0.6, carWid * 0.9), glassMat);
-      cabin.position.set(isVan ? -0.4 : -0.2, 0.85 + (carHgt * 0.3), 0);
+      cabin.position.set(isBus ? 0 : (isVan ? -0.4 : -0.2), 0.85 + (carHgt * 0.3), 0);
       car.add(cabin);
 
       // Cabin Roof
       const cRoof = new THREE.Mesh(new THREE.BoxGeometry(cabinLen + 0.1, 0.08, carWid * 0.92), bodyMat);
-      cRoof.position.set(isVan ? -0.4 : -0.2, 0.85 + (carHgt * 0.6), 0);
+      cRoof.position.set(isBus ? 0 : (isVan ? -0.4 : -0.2), 0.85 + (carHgt * 0.6), 0);
       car.add(cRoof);
 
       // Taxi Roof Sign
@@ -2821,9 +3522,9 @@ class Shop3D {
         car.add(hLight);
       });
 
-      // 4 Wheels
+      // 4 or 6 Wheels
       const wheels = [];
-      const wxOffsets = [-carLen * 0.3, carLen * 0.3];
+      const wxOffsets = isBus ? [-carLen * 0.35, 0, carLen * 0.35] : [-carLen * 0.3, carLen * 0.3];
       const wzOffsets = [-carWid / 2 - 0.05, carWid / 2 + 0.05];
 
       wxOffsets.forEach(wx => {
@@ -2841,41 +3542,54 @@ class Shop3D {
     };
 
     // 1. Yellow City Taxi traveling Right (speed +8.5 m/s, Z = roadZ - 3.5)
-    const taxi = createCarModel(0xfacc15, true, false);
+    const taxi = createCarModel(0xfacc15, true, false, false);
     taxi.mesh.position.set(-18, 0, roadZ - 3.5);
     this.trafficCars.push({
       ...taxi,
       speed: 8.5,
       direction: 1, // moving +X
-      minX: -42,
-      maxX: 42
+      minX: -80,
+      maxX: 60
     });
     this.streetGroup.add(taxi.mesh);
 
     // 2. Blue Delivery Van traveling Left (speed -6.5 m/s, Z = roadZ + 3.5)
-    const van = createCarModel(0x0284c7, false, true);
+    const van = createCarModel(0x0284c7, false, true, false);
     van.mesh.position.set(20, 0, roadZ + 3.5);
     van.mesh.rotation.y = Math.PI; // facing -X
     this.trafficCars.push({
       ...van,
       speed: -6.5,
       direction: -1, // moving -X
-      minX: -42,
-      maxX: 42
+      minX: -80,
+      maxX: 60
     });
     this.streetGroup.add(van.mesh);
 
     // 3. Red Compact Sedan traveling Right (speed +10.0 m/s, Z = roadZ - 1.5)
-    const sedan = createCarModel(0xef4444, false, false);
+    const sedan = createCarModel(0xef4444, false, false, false);
     sedan.mesh.position.set(2, 0, roadZ - 1.5);
     this.trafficCars.push({
       ...sedan,
       speed: 10.0,
       direction: 1,
-      minX: -42,
-      maxX: 42
+      minX: -80,
+      maxX: 60
     });
     this.streetGroup.add(sedan.mesh);
+
+    // 4. Green City Bus traveling Left through tunnel and across city (speed -6.0 m/s, Z = roadZ + 1.5)
+    const bus = createCarModel(0x16a34a, false, false, true);
+    bus.mesh.position.set(45, 0, roadZ + 1.5);
+    bus.mesh.rotation.y = Math.PI; // facing -X
+    this.trafficCars.push({
+      ...bus,
+      speed: -6.0,
+      direction: -1,
+      minX: -80,
+      maxX: 60
+    });
+    this.streetGroup.add(bus.mesh);
   }
 
   // Initialize Sidewalk Pedestrians (Người đi bộ dạo phố)
@@ -3595,8 +4309,8 @@ class Shop3D {
         newX = Math.max(minX, Math.min(maxX, targetX));
       } else {
         // Outside in city:
-        // Overall city X-bounds
-        newX = Math.max(-43.0, Math.min(35.5, targetX));
+        // Overall city X-bounds: from West mountain tunnel exit (-84m) to East High-Rise District (+60m)
+        newX = Math.max(-84.0, Math.min(60.0, targetX));
 
         // River Safety Check: River is at X in [-38, -22].
         // Player can ONLY cross if on the Bridge (Z in [16.5, 33.5])!
@@ -3608,32 +4322,49 @@ class Shop3D {
           }
         }
 
+        // Highway Mountain Tunnel Corridor (X in [-80, -50]):
+        // Tunnel tube & pedestrian walkway is at Z in [17.0, 33.0].
+        // Player is safe inside the tunnel; outside is the solid mountain rock ridge!
+        if (newX <= -50.0 && newX >= -80.0) {
+          newZ = Math.max(17.2, Math.min(32.8, newZ));
+        }
+
+        // West of Tunnel Portal (X < -80.0):
+        if (newX < -80.0) {
+          newZ = Math.max(16.5, Math.min(33.5, newZ));
+        }
+
         // Alley & Lake Entrance Constraints:
         // North of the main street sidewalk (Z > 38.0):
         if (newZ > 38.0) {
-          if (newZ <= 42.0) {
-            // Must be within the alley corridor
-            newX = Math.max(15.0, Math.min(20.2, newX));
-          } else {
-            // Inside Lake Park (Z in [42.0, 67.0], X in [5.0, 35.5])
-            newX = Math.max(5.0, Math.min(35.5, newX));
+          if (newX <= 35.5) {
+            if (newZ <= 42.0) {
+              // Must be within the alley corridor
+              newX = Math.max(15.0, Math.min(20.2, newX));
+            } else {
+              // Inside Lake Park (Z in [42.0, 67.0], X in [5.0, 35.5])
+              newX = Math.max(5.0, Math.min(35.5, newX));
 
-            // Lake Water Safety Check:
-            // Deep water is at X in [8.5, 33.5], Z in [44.5, 65.5].
-            // Player is allowed on the Wooden Footbridge & Lake Pavilion: X in [18.2, 21.8], Z in [43.5, 58.5].
-            const inWaterBox = (newX > 8.5 && newX < 33.5 && newZ > 44.5 && newZ < 65.5);
-            const onBridgeOrPavilion = (newX >= 18.2 && newX <= 21.8 && newZ >= 43.5 && newZ <= 58.5);
+              // Lake Water Safety Check:
+              // Deep water is at X in [8.5, 33.5], Z in [44.5, 65.5].
+              // Player is allowed on the Wooden Footbridge & Lake Pavilion: X in [18.2, 21.8], Z in [43.5, 58.5].
+              const inWaterBox = (newX > 8.5 && newX < 33.5 && newZ > 44.5 && newZ < 65.5);
+              const onBridgeOrPavilion = (newX >= 18.2 && newX <= 21.8 && newZ >= 43.5 && newZ <= 58.5);
 
-            if (inWaterBox && !onBridgeOrPavilion) {
-              // Constrain to nearest promenade edge
-              if (p.pos.z <= 44.5) newZ = 44.5;
-              else if (p.pos.z >= 65.5) newZ = 65.5;
-              else if (p.pos.x <= 8.5) newX = 8.5;
-              else if (p.pos.x >= 33.5) newX = 33.5;
-              else {
-                newX = Math.max(18.5, Math.min(21.5, newX));
+              if (inWaterBox && !onBridgeOrPavilion) {
+                // Constrain to nearest promenade edge
+                if (p.pos.z <= 44.5) newZ = 44.5;
+                else if (p.pos.z >= 65.5) newZ = 65.5;
+                else if (p.pos.x <= 8.5) newX = 8.5;
+                else if (p.pos.x >= 33.5) newX = 33.5;
+                else {
+                  newX = Math.max(18.5, Math.min(21.5, newX));
+                }
               }
             }
+          } else {
+            // East district North edge
+            newZ = Math.min(40.0, newZ);
           }
         }
       }
@@ -3703,6 +4434,8 @@ class Shop3D {
           promptText.innerText = 'Xe bánh mì hẻm phố: Ăn bánh mì giòn tan [E] 🥖';
         } else if (data.type === 'lake_pavilion') {
           promptText.innerText = 'Thủy Tạ: Ngắm hoa sen giữa hồ nước [E] 🪷';
+        } else if (data.type === 'tunnel_echo') {
+          promptText.innerText = 'Đường hầm: Hét to thử tiếng vọng vang vang [E] 🚇';
         }
       }
     } else {
@@ -3788,6 +4521,13 @@ class Shop3D {
       this.game.reputation = Math.min(100, this.game.reputation + 5);
       this.game.addFloatingText('🪷 Thư giãn ngắm sen: +5 Uy tín!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#ec4899');
       this.game.log('🪷 Bạn ngồi nghỉ chân trong Thủy Tạ giữa hồ sen thanh bình, ngắm nhìn những đóa sen hồng ngát hương. Uy tín tăng thêm +5 điểm!');
+      this.game.updateStatsUI();
+    } else if (targetData.type === 'tunnel_echo') {
+      if (window.gameAudio) gameAudio.playChaChing();
+      this.player.speedBoostTimer = 50;
+      this.game.reputation = Math.min(100, this.game.reputation + 5);
+      this.game.addFloatingText('🚇 TIẾNG VỌNG VANG VỌNG TRONG HẦM: +5 UY TÍN & +TĂNG TỐC!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#f59e0b');
+      this.game.log('🚇 "A lô... ô... ô...!" - Tiếng hét của bạn vang vọng rền rĩ suốt 30 mét đường hầm! Gió hầm mát rượi giúp bạn sảng khoái tinh thần, tiệm nhận +5 Uy tín & tăng tốc độ chạy!');
       this.game.updateStatsUI();
     }
   }
@@ -4002,6 +4742,9 @@ class Shop3D {
       <button id="btn-view-alley" class="cam-btn-view cam-btn-alley" title="Xem nhanh Hẻm Phố Cổ truyền Việt Nam">
         🏘️ Hẻm phố
       </button>
+      <button id="btn-view-tunnel" class="cam-btn-view cam-btn-tunnel" title="Xem nhanh Đường Hầm Đô Thị Xuyên Núi">
+        🚇 Đường hầm
+      </button>
       <button id="btn-toggle-camera-mode" class="cam-btn" title="Chuyển đổi giữa góc nhìn Quản lý 3D và Góc nhìn thứ nhất (Phím V)">
         🔄 Đổi góc nhìn [Phím V]
       </button>
@@ -4079,6 +4822,16 @@ class Shop3D {
         new THREE.Vector3(17.5, 1.5, 24),
         'btn-view-alley',
         '🏘️ Đang xem Hẻm Phố Cổ lung linh ánh đèn!'
+      );
+    };
+
+    // 6. Click: Smooth glide to Highway Mountain Tunnel view
+    document.getElementById('btn-view-tunnel').onclick = () => {
+      this.transitionToView(
+        new THREE.Vector3(-46, 17, 43),
+        new THREE.Vector3(-65, 3.5, 25),
+        'btn-view-tunnel',
+        '🚇 Đang ngắm toàn cảnh Đường Hầm Đô Thị Xuyên Núi hoành tráng!'
       );
     };
 
@@ -4169,6 +4922,7 @@ class Shop3D {
   }
 
   // Animated Traffic Cars along Road
+  // Animated Traffic Cars along Road, Bridge & Mountain Tunnel
   updateStreetTraffic(dt) {
     if (!this.trafficCars || this.trafficCars.length === 0) return;
 
@@ -4180,6 +4934,16 @@ class Shop3D {
         car.wheels.forEach(w => {
           w.rotation.x += car.speed * dt * 3.5;
         });
+      }
+
+      // Smooth Arch Elevation across Bridge
+      if (car.mesh.position.x <= -22.0 && car.mesh.position.x >= -38.0) {
+        const bridgeCenter = -30.0;
+        const bridgeHalfSpan = 8.0;
+        const t = Math.abs(car.mesh.position.x - bridgeCenter) / bridgeHalfSpan;
+        car.mesh.position.y = Math.max(0, (1 - t * t) * 0.38);
+      } else {
+        car.mesh.position.y = 0;
       }
 
       // Wrap around road boundaries
