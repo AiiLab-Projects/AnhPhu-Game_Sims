@@ -42,11 +42,17 @@ class Shop3D {
       isMouseDown: false,
       lastMouseX: 0,
       lastMouseY: 0,
-      targetedObject: null
+      targetedObject: null,
+      speedBoostTimer: 0
     };
 
     // Textures Cache
     this.textures = {};
+
+    // Exterior Street Simulation Entities
+    this.slidingDoors = null;
+    this.trafficCars = [];
+    this.pedestrians = [];
 
     this.init();
   }
@@ -210,12 +216,256 @@ class Shop3D {
     const matTex = new THREE.CanvasTexture(matCanvas);
     matTex.needsUpdate = true;
     this.textures.welcomeMat = matTex;
+
+    // 6. Exterior Sidewalk Paver Tiles
+    const swCanvas = document.createElement('canvas');
+    swCanvas.width = 512;
+    swCanvas.height = 512;
+    const swCtx = swCanvas.getContext('2d');
+    swCtx.fillStyle = '#475569';
+    swCtx.fillRect(0, 0, 512, 512);
+    const swTile = 64;
+    for (let x = 0; x < 512; x += swTile) {
+      for (let y = 0; y < 512; y += swTile) {
+        const isOffset = ((x / swTile + y / swTile) % 2 === 0);
+        swCtx.fillStyle = isOffset ? '#64748b' : '#526176';
+        swCtx.fillRect(x + 2, y + 2, swTile - 4, swTile - 4);
+        swCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+        swCtx.lineWidth = 2;
+        swCtx.strokeRect(x + 3, y + 3, swTile - 6, swTile - 6);
+      }
+    }
+    const swTex = new THREE.CanvasTexture(swCanvas);
+    swTex.wrapS = THREE.RepeatWrapping;
+    swTex.wrapT = THREE.RepeatWrapping;
+    swTex.repeat.set(12, 3);
+    swTex.needsUpdate = true;
+    this.textures.sidewalk = swTex;
+
+    // 7. Asphalt Road with Pedestrian Zebra Crosswalk
+    const roadCanvas = document.createElement('canvas');
+    roadCanvas.width = 1024;
+    roadCanvas.height = 512;
+    const rCtx = roadCanvas.getContext('2d');
+    rCtx.fillStyle = '#1e293b';
+    rCtx.fillRect(0, 0, 1024, 512);
+
+    // Center Dashed Yellow Lane Divider (across width)
+    rCtx.strokeStyle = '#facc15';
+    rCtx.lineWidth = 8;
+    rCtx.setLineDash([32, 24]);
+    rCtx.beginPath();
+    rCtx.moveTo(0, 256);
+    rCtx.lineTo(1024, 256);
+    rCtx.stroke();
+    rCtx.setLineDash([]);
+
+    // Zebra Crosswalk (marked in center of road facing store entrance)
+    rCtx.fillStyle = '#f8fafc';
+    const zebraStart = 380;
+    const zebraEnd = 540;
+    for (let x = zebraStart; x < zebraEnd; x += 36) {
+      rCtx.fillRect(x, 40, 22, 432);
+    }
+    const roadTex = new THREE.CanvasTexture(roadCanvas);
+    roadTex.wrapS = THREE.RepeatWrapping;
+    roadTex.wrapT = THREE.ClampToEdgeWrapping;
+    roadTex.repeat.set(1, 1);
+    roadTex.needsUpdate = true;
+    this.textures.road = roadTex;
+
+    // 8. Storefront Striped Canopy Awning
+    const awnCanvas = document.createElement('canvas');
+    awnCanvas.width = 256;
+    awnCanvas.height = 256;
+    const aCtx = awnCanvas.getContext('2d');
+    const stripeW = 32;
+    for (let x = 0; x < 256; x += stripeW) {
+      aCtx.fillStyle = (x / stripeW) % 2 === 0 ? '#0284c7' : '#fef08a';
+      aCtx.fillRect(x, 0, stripeW, 256);
+    }
+    const awnTex = new THREE.CanvasTexture(awnCanvas);
+    awnTex.wrapS = THREE.RepeatWrapping;
+    awnTex.wrapT = THREE.RepeatWrapping;
+    awnTex.repeat.set(3, 1);
+    awnTex.needsUpdate = true;
+    this.textures.awning = awnTex;
+
+    // 9. Outdoor Beverage Vending Machine Front Texture
+    const vmCanvas = document.createElement('canvas');
+    vmCanvas.width = 512;
+    vmCanvas.height = 1024;
+    const vmCtx = vmCanvas.getContext('2d');
+    
+    // Glossy Blue/Cyan Machine Body
+    const vmGrad = vmCtx.createLinearGradient(0, 0, 512, 1024);
+    vmGrad.addColorStop(0, '#0369a1');
+    vmGrad.addColorStop(1, '#082f49');
+    vmCtx.fillStyle = vmGrad;
+    vmCtx.fillRect(0, 0, 512, 1024);
+
+    // Glowing Header Display
+    vmCtx.fillStyle = '#38bdf8';
+    vmCtx.fillRect(20, 25, 472, 110);
+    vmCtx.fillStyle = '#0f172a';
+    vmCtx.font = '900 48px "Outfit", sans-serif';
+    vmCtx.textAlign = 'center';
+    vmCtx.fillText('🧊 COLD DRINKS ⚡', 256, 95);
+
+    // Display Glass Window with Drink Cans
+    vmCtx.fillStyle = '#0c4a6e';
+    vmCtx.fillRect(25, 160, 462, 540);
+    vmCtx.strokeStyle = 'rgba(255,255,255,0.4)';
+    vmCtx.lineWidth = 4;
+    vmCtx.strokeRect(25, 160, 462, 540);
+
+    // Rows of Colorful Soda & Energy Drink Cans
+    const rowColors = ['#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+    const rowNames = ['COLA', 'SODA', 'ENERGY', 'GRAPE'];
+    for (let r = 0; r < 4; r++) {
+      const cy = 200 + r * 125;
+      for (let c = 0; c < 4; c++) {
+        const cx = 55 + c * 105;
+        // Can body
+        vmCtx.fillStyle = rowColors[r];
+        vmCtx.fillRect(cx, cy, 65, 80);
+        // Can rim
+        vmCtx.fillStyle = '#e2e8f0';
+        vmCtx.fillRect(cx + 4, cy - 6, 57, 6);
+        vmCtx.fillRect(cx + 4, cy + 80, 57, 6);
+        // Can label text
+        vmCtx.fillStyle = '#ffffff';
+        vmCtx.font = '900 13px sans-serif';
+        vmCtx.textAlign = 'center';
+        vmCtx.fillText(rowNames[r], cx + 32, cy + 45);
+        // Green purchase button below can
+        vmCtx.fillStyle = '#22c55e';
+        vmCtx.beginPath();
+        vmCtx.arc(cx + 32, cy + 100, 10, 0, Math.PI * 2);
+        vmCtx.fill();
+      }
+    }
+
+    // Coin slot & digital payment screen
+    vmCtx.fillStyle = '#0f172a';
+    vmCtx.fillRect(30, 725, 452, 90);
+    vmCtx.fillStyle = '#4ade80';
+    vmCtx.font = 'bold 28px monospace';
+    vmCtx.textAlign = 'left';
+    vmCtx.fillText('15.000₫ [BAM E]', 50, 780);
+
+    // Can Drop Dispenser Chute at bottom
+    vmCtx.fillStyle = '#1e293b';
+    vmCtx.fillRect(40, 840, 432, 140);
+    vmCtx.strokeStyle = '#475569';
+    vmCtx.lineWidth = 6;
+    vmCtx.strokeRect(40, 840, 432, 140);
+    vmCtx.fillStyle = '#94a3b8';
+    vmCtx.font = 'bold 22px sans-serif';
+    vmCtx.textAlign = 'center';
+    vmCtx.fillText('PUSH FOR DRINKS 🥤', 256, 920);
+
+    const vmTex = new THREE.CanvasTexture(vmCanvas);
+    vmTex.needsUpdate = true;
+    this.textures.vending = vmTex;
+
+    // 10. A-Frame Sidewalk Chalkboard Standee Texture
+    const cbCanvas = document.createElement('canvas');
+    cbCanvas.width = 512;
+    cbCanvas.height = 768;
+    const cbCtx = cbCanvas.getContext('2d');
+    cbCtx.fillStyle = '#18181b'; // Chalkboard dark slate
+    cbCtx.fillRect(0, 0, 512, 768);
+
+    // Wooden Frame Border
+    cbCtx.strokeStyle = '#78350f';
+    cbCtx.lineWidth = 24;
+    cbCtx.strokeRect(12, 12, 488, 744);
+
+    // Chalk Handwriting
+    cbCtx.textAlign = 'center';
+    cbCtx.font = '900 38px "Outfit", cursive, sans-serif';
+    cbCtx.fillStyle = '#fef08a';
+    cbCtx.fillText('🏪 TIỆM BÁCH HÓA', 256, 90);
+    cbCtx.fillText('VUI VẺ', 256, 140);
+
+    cbCtx.strokeStyle = '#38bdf8';
+    cbCtx.lineWidth = 4;
+    cbCtx.beginPath();
+    cbCtx.moveTo(70, 165);
+    cbCtx.lineTo(442, 165);
+    cbCtx.stroke();
+
+    cbCtx.font = 'bold 30px "Nunito", sans-serif';
+    cbCtx.fillStyle = '#ffffff';
+    cbCtx.fillText('⭐ SIÊU KHUYẾN MÃI ⭐', 256, 220);
+
+    cbCtx.font = '26px "Nunito", sans-serif';
+    cbCtx.fillStyle = '#a7f3d0';
+    cbCtx.fillText('🥤 Nước ngọt mát lạnh', 256, 290);
+    cbCtx.fillText('🍿 Snack & Bánh kẹo', 256, 350);
+    cbCtx.fillText('🍜 Mì ăn liền các loại', 256, 410);
+
+    cbCtx.fillStyle = '#fef08a';
+    cbCtx.font = '900 34px "Outfit", sans-serif';
+    cbCtx.fillText('GIẢM ĐẾN 30%!', 256, 490);
+
+    cbCtx.fillStyle = '#38bdf8';
+    cbCtx.font = 'bold 26px "Nunito", sans-serif';
+    cbCtx.fillText('👉 Bấm [E] để Vẫy Gọi Khách!', 256, 580);
+    cbCtx.font = '22px "Nunito", sans-serif';
+    cbCtx.fillStyle = '#94a3b8';
+    cbCtx.fillText('(Tăng lượng khách & uy tín)', 256, 625);
+
+    const cbTex = new THREE.CanvasTexture(cbCanvas);
+    cbTex.needsUpdate = true;
+    this.textures.chalkboard = cbTex;
+
+    // 11. Opposite Street Buildings Textures
+    const makeFacadeTex = (title, bannerColor, accentColor, detailText) => {
+      const c = document.createElement('canvas');
+      c.width = 512;
+      c.height = 512;
+      const ctx = c.getContext('2d');
+      // Wall
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(0, 0, 512, 512);
+      // Ground floor storefront
+      ctx.fillStyle = bannerColor;
+      ctx.fillRect(20, 20, 472, 120);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 42px "Outfit", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, 256, 95);
+
+      // Window display
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(30, 160, 452, 210);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = 'bold 24px "Nunito", sans-serif';
+      ctx.fillText(detailText, 256, 270);
+
+      // Upper floor windows
+      ctx.fillStyle = '#fef08a';
+      [80, 200, 320, 420].forEach(wx => {
+        ctx.fillRect(wx - 25, 400, 50, 70);
+      });
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.needsUpdate = true;
+      return tex;
+    };
+
+    this.textures.cafeFacade = makeFacadeTex('☕ CÀ PHÊ PHỐ CỔ', '#78350f', '#0f172a', 'Espresso • Trà Sữa • Bánh Ngọt');
+    this.textures.pharmacyFacade = makeFacadeTex('💊 HIỆU THUỐC 24/7', '#059669', '#064e3b', 'Thuốc Chuẩn GPP • Tận Tâm');
+    this.textures.bakeryFacade = makeFacadeTex('🥐 TIỆM BÁNH MÌ', '#d97706', '#7c2d12', 'Bánh Mì Nóng Giòn Mỗi Sáng');
   }
 
   setupScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#0b1120');
-    this.scene.fog = new THREE.FogExp2('#0b1120', 0.012);
+    // Clear atmosphere with soft distant city depth
+    this.scene.fog = new THREE.Fog('#0b1120', 26, 95);
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -238,7 +488,7 @@ class Shop3D {
     const aspect = this.container.clientWidth / this.container.clientHeight;
 
     // 1. Isometric / Management Camera (Top-down tilted)
-    this.isoCamera = new THREE.PerspectiveCamera(45, aspect, 0.5, 200);
+    this.isoCamera = new THREE.PerspectiveCamera(45, aspect, 0.5, 250);
     this.isoCamera.position.set(0, 18, 19);
     this.isoCamera.lookAt(0, 1.2, 0);
 
@@ -247,14 +497,14 @@ class Shop3D {
       this.controls = new THREE.OrbitControls(this.isoCamera, this.renderer.domElement);
       this.controls.enableDamping = true;
       this.controls.dampingFactor = 0.08;
-      this.controls.maxPolarAngle = Math.PI / 2.1;
-      this.controls.minDistance = 6;
-      this.controls.maxDistance = 35;
+      this.controls.maxPolarAngle = Math.PI / 2.05;
+      this.controls.minDistance = 5;
+      this.controls.maxDistance = 65; // Extended zoom to view street & neighborhood
       this.controls.target.set(0, 1.2, 0);
     }
 
     // 2. First-Person FPS Camera
-    this.fpsCamera = new THREE.PerspectiveCamera(72, aspect, 0.1, 150);
+    this.fpsCamera = new THREE.PerspectiveCamera(72, aspect, 0.1, 200);
     this.fpsCamera.position.copy(this.player.pos);
     this.fpsCamera.lookAt(0, 1.65, -5);
 
@@ -264,18 +514,18 @@ class Shop3D {
 
   setupLights() {
     // Soft Ambient Light
-    const ambient = new THREE.AmbientLight(0xfff6ea, 0.7);
+    const ambient = new THREE.AmbientLight(0xfff6ea, 0.75);
     this.scene.add(ambient);
 
-    // Directional Sunlight
-    const sunLight = new THREE.DirectionalLight(0xffffff, 0.75);
-    sunLight.position.set(10, 25, 15);
+    // Directional Sunlight covering both store interior and street exterior
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.85);
+    sunLight.position.set(12, 30, 18);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 1024;
     sunLight.shadow.mapSize.height = 1024;
     sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 60;
-    const d = 16;
+    sunLight.shadow.camera.far = 85;
+    const d = 28;
     sunLight.shadow.camera.left = -d;
     sunLight.shadow.camera.right = d;
     sunLight.shadow.camera.top = d;
@@ -628,7 +878,7 @@ class Shop3D {
     this.scene.add(fridgeGroup);
   }
 
-  // Glass Storefront & Sliding Doors
+  // Glass Storefront with Automatic Sliding Doors & Street Façade
   buildGlassStorefront(W, H, D) {
     const frontGroup = new THREE.Group();
     const glassMat = new THREE.MeshStandardMaterial({
@@ -638,27 +888,202 @@ class Shop3D {
       roughness: 0.1,
       metalness: 0.2
     });
+    const doorGlassMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.42,
+      roughness: 0.1,
+      metalness: 0.3
+    });
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85, roughness: 0.15 });
 
+    const wallZ = D / 2; // 9.0
+
+    // Top Header Frame above all front glass
     const topFrameGeo = new THREE.BoxGeometry(W, 0.8, 0.4);
     const topFrame = new THREE.Mesh(topFrameGeo, frameMat);
-    topFrame.position.set(0, H - 0.4, D / 2);
+    topFrame.position.set(0, H - 0.4, wallZ);
     frontGroup.add(topFrame);
 
-    const glassGeo = new THREE.BoxGeometry(W, H - 0.8, 0.1);
-    const glassMesh = new THREE.Mesh(glassGeo, glassMat);
-    glassMesh.position.set(0, (H - 0.8) / 2, D / 2);
-    frontGroup.add(glassMesh);
+    // Left glass wall: from X = -12 to X = -9.6 (width = 2.4, center = -10.8)
+    const leftGlassGeo = new THREE.BoxGeometry(2.4, H - 0.8, 0.1);
+    const leftGlass = new THREE.Mesh(leftGlassGeo, glassMat);
+    leftGlass.position.set(-10.8, (H - 0.8) / 2, wallZ);
+    frontGroup.add(leftGlass);
 
-    // Welcome Door Mat
+    // Left door pillar
+    const leftPillar = new THREE.Mesh(new THREE.BoxGeometry(0.2, H, 0.35), frameMat);
+    leftPillar.position.set(-9.6, H / 2, wallZ);
+    frontGroup.add(leftPillar);
+
+    // Right door pillar
+    const rightPillar = new THREE.Mesh(new THREE.BoxGeometry(0.2, H, 0.35), frameMat);
+    rightPillar.position.set(-6.4, H / 2, wallZ);
+    frontGroup.add(rightPillar);
+
+    // Door Header Transom glass (above the sliding doors: Y from 3.3 to H - 0.8)
+    const transomHeight = (H - 0.8) - 3.3;
+    if (transomHeight > 0) {
+      const transomGeo = new THREE.BoxGeometry(3.0, transomHeight, 0.1);
+      const transomGlass = new THREE.Mesh(transomGeo, glassMat);
+      transomGlass.position.set(-8.0, 3.3 + transomHeight / 2, wallZ);
+      frontGroup.add(transomGlass);
+    }
+
+    // Door Track Beam
+    const trackBeam = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.2, 0.35), frameMat);
+    trackBeam.position.set(-8.0, 3.3, wallZ);
+    frontGroup.add(trackBeam);
+
+    // 2 Automatic Sliding Glass Door Panels
+    // Left Door Panel
+    const leftDoor = new THREE.Group();
+    const lDoorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.5, 3.15, 0.08), doorGlassMat);
+    lDoorPanel.position.set(0, 1.575, 0);
+    leftDoor.add(lDoorPanel);
+    const lFrameTop = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.1, 0.1), frameMat);
+    lFrameTop.position.set(0, 3.15, 0);
+    leftDoor.add(lFrameTop);
+    const lFrameBottom = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.1, 0.1), frameMat);
+    lFrameBottom.position.set(0, 0.05, 0);
+    leftDoor.add(lFrameBottom);
+    // Vertical chrome handle
+    const lHandle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.9, 0.12), chromeMat);
+    lHandle.position.set(0.62, 1.5, 0);
+    leftDoor.add(lHandle);
+    leftDoor.position.set(-8.75, 0, wallZ);
+    frontGroup.add(leftDoor);
+
+    // Right Door Panel
+    const rightDoor = new THREE.Group();
+    const rDoorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.5, 3.15, 0.08), doorGlassMat);
+    rDoorPanel.position.set(0, 1.575, 0);
+    rightDoor.add(rDoorPanel);
+    const rFrameTop = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.1, 0.1), frameMat);
+    rFrameTop.position.set(0, 3.15, 0);
+    rightDoor.add(rFrameTop);
+    const rFrameBottom = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.1, 0.1), frameMat);
+    rFrameBottom.position.set(0, 0.05, 0);
+    rightDoor.add(rFrameBottom);
+    const rHandle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.9, 0.12), chromeMat);
+    rHandle.position.set(-0.62, 1.5, 0);
+    rightDoor.add(rHandle);
+    rightDoor.position.set(-7.25, 0, wallZ);
+    frontGroup.add(rightDoor);
+
+    this.slidingDoors = {
+      left: leftDoor,
+      right: rightDoor,
+      leftClosedX: -8.75,
+      rightClosedX: -7.25,
+      leftOpenX: -10.15,
+      rightOpenX: -5.85,
+      currentOpen: 0,
+      targetOpen: 0
+    };
+
+    // Right large storefront showcase glass (from X = -6.4 to +12, width = 18.4, center = 2.8)
+    const rightGlassGeo = new THREE.BoxGeometry(18.4, H - 0.8, 0.1);
+    const rightGlass = new THREE.Mesh(rightGlassGeo, glassMat);
+    rightGlass.position.set(2.8, (H - 0.8) / 2, wallZ);
+    frontGroup.add(rightGlass);
+
+    // Vertical Mullions every 3.6m along the right showcase glass
+    for (let mx = -2.8; mx <= 9.5; mx += 3.6) {
+      const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.12, H - 0.8, 0.2), frameMat);
+      mullion.position.set(mx, (H - 0.8) / 2, wallZ);
+      frontGroup.add(mullion);
+    }
+
+    // Modern Striped Awning above entrance
+    this.buildEntranceAwning(frontGroup, -8.0, 3.8, wallZ);
+
+    // Grand Storefront Signboard above roof facing the street
+    this.buildGrandOutdoorSign(frontGroup, 0, H + 0.9, wallZ + 0.1);
+
+    // Welcome Door Mat inside & outside entrance
     const matGeo = new THREE.PlaneGeometry(2.4, 1.4);
     const matMaterial = new THREE.MeshBasicMaterial({ map: this.textures.welcomeMat });
-    const matMesh = new THREE.Mesh(matGeo, matMaterial);
-    matMesh.rotation.x = -Math.PI / 2;
-    matMesh.position.set(-8, 0.02, D / 2 - 1.0);
-    this.scene.add(matMesh);
+    const matMeshIn = new THREE.Mesh(matGeo, matMaterial);
+    matMeshIn.rotation.x = -Math.PI / 2;
+    matMeshIn.position.set(-8, 0.02, wallZ - 1.0);
+    this.scene.add(matMeshIn);
+
+    const matMeshOut = new THREE.Mesh(matGeo, matMaterial);
+    matMeshOut.rotation.x = -Math.PI / 2;
+    matMeshOut.position.set(-8, 0.02, wallZ + 1.0);
+    this.scene.add(matMeshOut);
 
     this.scene.add(frontGroup);
+  }
+
+  // Entrance Striped Awning Canopy
+  buildEntranceAwning(parentGroup, centerX, baseY, baseZ) {
+    const awningGroup = new THREE.Group();
+    const width = 6.8;
+    const depth = 2.6;
+    const drop = 0.7;
+
+    const canvasMat = new THREE.MeshStandardMaterial({
+      map: this.textures.awning,
+      roughness: 0.65,
+      side: THREE.DoubleSide
+    });
+
+    const awningMesh = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), canvasMat);
+    awningMesh.position.set(centerX, baseY - drop / 2, baseZ + depth / 2);
+    awningMesh.rotation.x = Math.atan2(drop, depth);
+    awningGroup.add(awningMesh);
+
+    // Front Valance fringe
+    const valanceMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, side: THREE.DoubleSide });
+    const valance = new THREE.Mesh(new THREE.PlaneGeometry(width, 0.4), valanceMat);
+    valance.position.set(centerX, baseY - drop - 0.2, baseZ + depth);
+    awningGroup.add(valance);
+
+    // Support metal struts
+    const strutMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.7 });
+    [-width / 2 + 0.3, width / 2 - 0.3].forEach(sx => {
+      const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, depth * 1.05), strutMat);
+      strut.position.set(centerX + sx, baseY - drop / 2, baseZ + depth / 2);
+      strut.rotation.x = Math.PI / 2 - Math.atan2(drop, depth);
+      awningGroup.add(strut);
+    });
+
+    parentGroup.add(awningGroup);
+  }
+
+  // Grand Storefront Signboard above roof
+  buildGrandOutdoorSign(parentGroup, x, y, z) {
+    const signGroup = new THREE.Group();
+    signGroup.position.set(x, y, z);
+
+    // Signboard backplate
+    const plate = new THREE.Mesh(
+      new THREE.BoxGeometry(16, 1.8, 0.3),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 })
+    );
+    signGroup.add(plate);
+
+    // Signboard face with graphic texture
+    const face = new THREE.Mesh(
+      new THREE.PlaneGeometry(15.6, 1.6),
+      new THREE.MeshBasicMaterial({ map: this.textures.signboard })
+    );
+    face.position.z = 0.16;
+    signGroup.add(face);
+
+    // 2 Accent Spotlights pointing up at sign
+    [-5, 5].forEach(lx => {
+      const spot = new THREE.SpotLight(0xfffaed, 1.5, 9, Math.PI / 4, 0.3);
+      spot.position.set(lx, y - 0.6, z + 2.0);
+      spot.target.position.set(lx, y, z);
+      this.scene.add(spot);
+      this.scene.add(spot.target);
+    });
+
+    parentGroup.add(signGroup);
   }
 
   // Supermarket Checkout Counter (Quầy thu ngân L-shape)
@@ -810,37 +1235,682 @@ class Shop3D {
     this.scene.add(this.acGroup);
   }
 
-  // Exterior sidewalk & street outside glass storefront
+  // COMPREHENSIVE EXTERIOR STREET & OUTDOOR ENVIRONMENT
   buildExteriorStreet(W, D) {
-    const streetGroup = new THREE.Group();
+    this.streetGroup = new THREE.Group();
+    const frontZ = D / 2; // 9.0
 
-    const sidewalkGeo = new THREE.PlaneGeometry(W + 10, 8);
-    const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
-    const sidewalk = new THREE.Mesh(sidewalkGeo, sidewalkMat);
+    // 1. Main Sidewalk in front of Store (Z from 9.0 to 17.0, width 76m)
+    const swGeo = new THREE.PlaneGeometry(76, 8);
+    const swMat = new THREE.MeshStandardMaterial({
+      map: this.textures.sidewalk,
+      roughness: 0.75,
+      metalness: 0.05
+    });
+    const sidewalk = new THREE.Mesh(swGeo, swMat);
     sidewalk.rotation.x = -Math.PI / 2;
-    sidewalk.position.set(0, -0.05, D / 2 + 4);
-    streetGroup.add(sidewalk);
+    sidewalk.position.set(0, 0.01, frontZ + 4);
+    sidewalk.receiveShadow = true;
+    this.streetGroup.add(sidewalk);
 
-    const roadGeo = new THREE.PlaneGeometry(W + 20, 16);
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+    // Stone Curb Edge along Sidewalk (Z = 17.0)
+    const curbGeo = new THREE.BoxGeometry(76, 0.22, 0.35);
+    const curbMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+    const curb = new THREE.Mesh(curbGeo, curbMat);
+    curb.position.set(0, 0.05, frontZ + 8);
+    this.streetGroup.add(curb);
+
+    // 2. Asphalt Road with Zebra Crosswalk (Z from 17.0 to 33.0, width 80m)
+    const roadGeo = new THREE.PlaneGeometry(80, 16);
+    const roadMat = new THREE.MeshStandardMaterial({
+      map: this.textures.road,
+      roughness: 0.85
+    });
     const road = new THREE.Mesh(roadGeo, roadMat);
     road.rotation.x = -Math.PI / 2;
-    road.position.set(0, -0.15, D / 2 + 16);
-    streetGroup.add(road);
+    road.position.set(0, -0.06, frontZ + 16);
+    road.receiveShadow = true;
+    this.streetGroup.add(road);
 
-    const lampX = 8;
-    const lampZ = D / 2 + 3.5;
-    const poleGeo = new THREE.CylinderGeometry(0.08, 0.1, 4.5);
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
-    const pole = new THREE.Mesh(poleGeo, poleMat);
-    pole.position.set(lampX, 2.25, lampZ);
-    streetGroup.add(pole);
+    // 3. Opposite Sidewalk (Z from 33.0 to 38.0, width 76m)
+    const oppSwGeo = new THREE.PlaneGeometry(76, 5);
+    const oppSw = new THREE.Mesh(oppSwGeo, swMat);
+    oppSw.rotation.x = -Math.PI / 2;
+    oppSw.position.set(0, 0.01, frontZ + 25.5);
+    oppSw.receiveShadow = true;
+    this.streetGroup.add(oppSw);
 
-    const lampLight = new THREE.PointLight(0xfef08a, 1.2, 14);
-    lampLight.position.set(lampX, 4.5, lampZ);
-    streetGroup.add(lampLight);
+    // 4. Street Trees & Planter Flower Boxes along curb
+    this.createStreetTreesAndFlowers(frontZ);
 
-    this.scene.add(streetGroup);
+    // 5. Street Lamps (Đèn đường chiếu sáng ban đêm)
+    this.createStreetLamps(frontZ);
+
+    // 6. Interactive Outdoor Vending Machine (Máy bán nước tự động)
+    this.createOutdoorVendingMachine(-4.2, 0, frontZ + 1.2);
+
+    // 7. Interactive Chalkboard Standee (Bảng quảng cáo vỉa hè)
+    this.createSidewalkStandee(-8.0, 0, frontZ + 3.2);
+
+    // 8. Park Bench (Băng ghế ngoài phố)
+    this.createOutdoorBench(7.5, 0, frontZ + 2.0);
+
+    // 9. Parked Motorbike & Bicycle (Xe máy & Xe đạp đỗ trước quán)
+    this.createParkedVehicles(3.2, 0, frontZ + 1.8);
+
+    // 10. Delivery Cargo Pallet (Khu kiện hàng vừa giao tới)
+    this.createDeliveryPallet(-13.5, 0, frontZ + 1.5);
+
+    // 11. Street Public Trash Bin (Thùng rác ngoài phố)
+    this.createStreetTrashBin(-11.5, 0, frontZ + 1.5);
+
+    // 12. Opposite Town Buildings (Dãy phố đối diện sinh động)
+    this.createOppositeBuildings(frontZ);
+
+    // 13. Animated Traffic Cars on Road
+    this.initStreetTraffic(frontZ + 16);
+
+    // 14. Pedestrians on Sidewalk
+    this.initSidewalkPedestrians(frontZ + 5.0);
+
+    this.scene.add(this.streetGroup);
+  }
+
+  // Street Trees with Stone Planters and Colorful Flowers
+  createStreetTreesAndFlowers(frontZ) {
+    const treeXPositions = [-14, -1, 14];
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3d28, roughness: 0.9 });
+    const leavesDark = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 });
+    const leavesLight = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.6 });
+    const planterMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+    const soilMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.9 });
+    const flowerColors = [0xef4444, 0xfbbf24, 0xec4899, 0x38bdf8];
+
+    treeXPositions.forEach(tx => {
+      const treeGroup = new THREE.Group();
+      treeGroup.position.set(tx, 0, frontZ + 6.8);
+
+      // Stone Planter Box
+      const planter = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.35, 1.6), planterMat);
+      planter.position.y = 0.175;
+      treeGroup.add(planter);
+
+      // Soil inside planter
+      const soil = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.05, 1.45), soilMat);
+      soil.position.y = 0.35;
+      treeGroup.add(soil);
+
+      // Tree Trunk
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 3.2, 8), trunkMat);
+      trunk.position.y = 1.9;
+      trunk.castShadow = true;
+      treeGroup.add(trunk);
+
+      // Tiered Low-Poly Leaf Canopy
+      const leaf1 = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.0, 7), leavesDark);
+      leaf1.position.y = 3.6;
+      leaf1.castShadow = true;
+      treeGroup.add(leaf1);
+
+      const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.8, 7), leavesLight);
+      leaf2.position.y = 4.6;
+      leaf2.castShadow = true;
+      treeGroup.add(leaf2);
+
+      const leaf3 = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.4, 7), leavesDark);
+      leaf3.position.y = 5.4;
+      treeGroup.add(leaf3);
+
+      // Colorful flowers around trunk base
+      for (let fi = 0; fi < 6; fi++) {
+        const ang = (fi / 6) * Math.PI * 2;
+        const dist = 0.52;
+        const fMat = new THREE.MeshStandardMaterial({ color: flowerColors[fi % flowerColors.length] });
+        const flower = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), fMat);
+        flower.position.set(Math.cos(ang) * dist, 0.44, Math.sin(ang) * dist);
+        treeGroup.add(flower);
+      }
+
+      this.streetGroup.add(treeGroup);
+    });
+  }
+
+  // Modern Street Lamps with Warm Ambient Illumination
+  createStreetLamps(frontZ) {
+    const lampX = [-8, 8];
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.3 });
+    const headMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.6 });
+    const glassMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+    lampX.forEach(lx => {
+      const lampGroup = new THREE.Group();
+      lampGroup.position.set(lx, 0, frontZ + 7.4);
+
+      // Base collar
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.3, 0.5, 8), poleMat);
+      base.position.y = 0.25;
+      lampGroup.add(base);
+
+      // Vertical Pole (height 4.6m)
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 4.6, 8), poleMat);
+      pole.position.y = 2.55;
+      lampGroup.add(pole);
+
+      // Curved top arm
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.9), poleMat);
+      arm.position.set(0, 4.75, -0.35);
+      lampGroup.add(arm);
+
+      // Lantern head
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.45), headMat);
+      head.position.set(0, 4.68, -0.7);
+      lampGroup.add(head);
+
+      // Glowing lens
+      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 0.38), glassMat);
+      lens.position.set(0, 4.54, -0.7);
+      lampGroup.add(lens);
+
+      // Warm street illumination light
+      const lampLight = new THREE.PointLight(0xfef08a, 1.1, 16, 1.2);
+      lampLight.position.set(0, 4.4, -0.7);
+      lampGroup.add(lampLight);
+
+      this.streetGroup.add(lampGroup);
+    });
+  }
+
+  // Interactive Outdoor Vending Machine (Máy bán nước)
+  createOutdoorVendingMachine(x, y, z) {
+    const vmGroup = new THREE.Group();
+    vmGroup.position.set(x, y, z);
+
+    // Body Cabinet
+    const bodyGeo = new THREE.BoxGeometry(1.4, 2.4, 0.9);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.3, metalness: 0.2 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 1.2;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    vmGroup.add(body);
+
+    // Front Panel with Texture
+    const frontGeo = new THREE.PlaneGeometry(1.3, 2.3);
+    const frontMat = new THREE.MeshBasicMaterial({ map: this.textures.vending });
+    const front = new THREE.Mesh(frontGeo, frontMat);
+    front.position.set(0, 1.2, 0.46);
+    vmGroup.add(front);
+
+    // Soft Glowing Accent Light
+    const vmLight = new THREE.PointLight(0x38bdf8, 0.9, 4.5);
+    vmLight.position.set(0, 1.5, 0.8);
+    vmGroup.add(vmLight);
+
+    // Interactive Hitbox
+    const hitBox = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 2.5, 1.2),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.position.y = 1.2;
+    hitBox.userData = { type: 'vending_machine' };
+    vmGroup.add(hitBox);
+    this.interactiveObjects.push(hitBox);
+
+    this.streetGroup.add(vmGroup);
+  }
+
+  // Interactive Sidewalk A-Frame Chalkboard Standee (Bảng quảng cáo)
+  createSidewalkStandee(x, y, z) {
+    const standeeGroup = new THREE.Group();
+    standeeGroup.position.set(x, y, z);
+
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
+    const boardMat = new THREE.MeshBasicMaterial({ map: this.textures.chalkboard });
+
+    // Front Board (leaning slightly backward)
+    const fBoard = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.3), boardMat);
+    fBoard.position.set(0, 0.72, 0.15);
+    fBoard.rotation.x = -0.15;
+    standeeGroup.add(fBoard);
+
+    // Back Board
+    const bBoard = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.3), boardMat);
+    bBoard.position.set(0, 0.72, -0.15);
+    bBoard.rotation.x = 0.15;
+    bBoard.rotation.y = Math.PI;
+    standeeGroup.add(bBoard);
+
+    // Wooden A-Frame Legs
+    [-0.44, 0.44].forEach(lx => {
+      const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.5, 0.06), frameMat);
+      leg1.position.set(lx, 0.75, 0.16);
+      leg1.rotation.x = -0.15;
+      standeeGroup.add(leg1);
+
+      const leg2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.5, 0.06), frameMat);
+      leg2.position.set(lx, 0.75, -0.16);
+      leg2.rotation.x = 0.15;
+      standeeGroup.add(leg2);
+    });
+
+    // Interactive Hitbox
+    const hitBox = new THREE.Mesh(
+      new THREE.BoxGeometry(1.2, 1.6, 0.9),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.position.y = 0.75;
+    hitBox.userData = { type: 'sidewalk_sign' };
+    standeeGroup.add(hitBox);
+    this.interactiveObjects.push(hitBox);
+
+    this.streetGroup.add(standeeGroup);
+  }
+
+  // Interactive Park Bench (Băng ghế nghỉ ngơi ngoài phố)
+  createOutdoorBench(x, y, z) {
+    const benchGroup = new THREE.Group();
+    benchGroup.position.set(x, y, z);
+
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.5 });
+    const ironMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.3 });
+
+    // 2 Cast Iron Leg Frames
+    [-0.9, 0.9].forEach(lx => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.6), ironMat);
+      leg.position.set(lx, 0.25, 0);
+      benchGroup.add(leg);
+
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.08), ironMat);
+      arm.position.set(lx, 0.65, -0.25);
+      benchGroup.add(arm);
+    });
+
+    // Seat Wood Slats
+    for (let si = -0.22; si <= 0.22; si += 0.11) {
+      const slat = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.04, 0.08), woodMat);
+      slat.position.set(0, 0.5, si);
+      benchGroup.add(slat);
+    }
+
+    // Backrest Wood Slats
+    for (let bi = 0.65; bi <= 0.95; bi += 0.12) {
+      const bSlat = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.08, 0.04), woodMat);
+      bSlat.position.set(0, bi, -0.28);
+      benchGroup.add(bSlat);
+    }
+
+    // Interactive Hitbox
+    const hitBox = new THREE.Mesh(
+      new THREE.BoxGeometry(2.3, 1.1, 1.0),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.position.y = 0.55;
+    hitBox.userData = { type: 'bench' };
+    benchGroup.add(hitBox);
+    this.interactiveObjects.push(hitBox);
+
+    this.streetGroup.add(benchGroup);
+  }
+
+  // Parked Motorbike & Bicycle (Xe máy & Xe đạp đỗ trước quán)
+  createParkedVehicles(x, y, z) {
+    const vGroup = new THREE.Group();
+    vGroup.position.set(x, y, z);
+
+    // 1. Vietnamese Scooter / Motorbike (Xe tay ga)
+    const scooter = new THREE.Group();
+    scooter.position.set(0, 0, 0);
+    scooter.rotation.y = 0.2;
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 }); // Red sporty scooter
+    const blackMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.6 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8 });
+
+    // Scooter Body & Floorboard
+    const sBody = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 1.3), bodyMat);
+    sBody.position.set(0, 0.45, 0);
+    scooter.add(sBody);
+
+    // Seat
+    const sSeat = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.12, 0.75), blackMat);
+    sSeat.position.set(0, 0.74, -0.15);
+    scooter.add(sSeat);
+
+    // Front Handlebars & Fairing
+    const sFront = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.75, 0.35), bodyMat);
+    sFront.position.set(0, 0.65, 0.5);
+    scooter.add(sFront);
+
+    const sBars = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.65), chromeMat);
+    sBars.rotation.z = Math.PI / 2;
+    sBars.position.set(0, 1.05, 0.45);
+    scooter.add(sBars);
+
+    // Headlight
+    const sLight = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfef08a }));
+    sLight.position.set(0, 0.9, 0.68);
+    scooter.add(sLight);
+
+    // 2 Wheels (Black rubber cylinders)
+    [-0.55, 0.55].forEach(wz => {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.12, 12), blackMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(0, 0.24, wz);
+      scooter.add(wheel);
+    });
+
+    vGroup.add(scooter);
+
+    // 2. Commuter Bicycle parked next to scooter
+    const bike = new THREE.Group();
+    bike.position.set(1.1, 0, 0.1);
+    bike.rotation.y = -0.15;
+    const bikeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.5 }); // Cyan frame
+
+    // Frame tubes
+    const topTube = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.7), bikeMat);
+    topTube.rotation.x = Math.PI / 2;
+    topTube.position.set(0, 0.68, 0);
+    bike.add(topTube);
+
+    const downTube = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.75), bikeMat);
+    downTube.rotation.x = Math.PI / 4;
+    downTube.position.set(0, 0.45, 0.2);
+    bike.add(downTube);
+
+    // Bicycle Wheels
+    [-0.5, 0.5].forEach(bwz => {
+      const bWheel = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.025, 8, 20), blackMat);
+      bWheel.rotation.y = Math.PI / 2;
+      bWheel.position.set(0, 0.3, bwz);
+      bike.add(bWheel);
+    });
+
+    vGroup.add(bike);
+    this.streetGroup.add(vGroup);
+  }
+
+  // Delivery Cargo Pallet (Khu kiện hàng giao tới)
+  createDeliveryPallet(x, y, z) {
+    const palletGroup = new THREE.Group();
+    palletGroup.position.set(x, y, z);
+
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.9 });
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.8 });
+
+    // Wooden Pallet Base
+    const palletBase = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.14, 1.4), woodMat);
+    palletBase.position.y = 0.07;
+    palletGroup.add(palletBase);
+
+    // 3 Stacked Cardboard Delivery Boxes
+    const boxConfigs = [
+      { sx: 0.65, sy: 0.5, sz: 0.65, px: -0.28, py: 0.39, pz: -0.25 },
+      { sx: 0.6, sy: 0.55, sz: 0.6, px: 0.3, py: 0.41, pz: 0.22 },
+      { sx: 0.55, sy: 0.45, sz: 0.55, px: 0.0, py: 0.88, pz: 0.0 }
+    ];
+
+    boxConfigs.forEach(b => {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(b.sx, b.sy, b.sz), boxMat);
+      box.position.set(b.px, b.py, b.pz);
+      box.castShadow = true;
+      palletGroup.add(box);
+    });
+
+    // Interactive Hitbox
+    const hitBox = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 1.3, 1.6),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.position.y = 0.65;
+    hitBox.userData = { type: 'delivery_pallet' };
+    palletGroup.add(hitBox);
+    this.interactiveObjects.push(hitBox);
+
+    this.streetGroup.add(palletGroup);
+  }
+
+  // Street Public Trash Bin (Thùng rác ngoài phố)
+  createStreetTrashBin(x, y, z) {
+    const binGroup = new THREE.Group();
+    binGroup.position.set(x, y, z);
+
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.6, roughness: 0.3 });
+    const greenMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.4 });
+
+    // Bin Cylinder Body
+    const binBody = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.26, 0.85, 12), metalMat);
+    binBody.position.y = 0.45;
+    binGroup.add(binBody);
+
+    // Green Hood/Lid
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.15, 12), greenMat);
+    lid.position.y = 0.92;
+    binGroup.add(lid);
+
+    // Interactive Hitbox
+    const hitBox = new THREE.Mesh(
+      new THREE.BoxGeometry(0.9, 1.2, 0.9),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hitBox.position.y = 0.5;
+    hitBox.userData = { type: 'outdoor_trash' };
+    binGroup.add(hitBox);
+    this.interactiveObjects.push(hitBox);
+
+    this.streetGroup.add(binGroup);
+  }
+
+  // Opposite Town Buildings across the street (Dãy phố đối diện sinh động)
+  createOppositeBuildings(frontZ) {
+    const buildingsGroup = new THREE.Group();
+    const bZ = frontZ + 33; // 42.0
+
+    const wallMatDark = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5 });
+
+    // Building Specs across the street
+    const specs = [
+      {
+        x: -22, w: 12, h: 14, d: 8,
+        color: 0x334155, title: 'CĂN HỘ PHỐ MỚI',
+        facadeTex: null
+      },
+      {
+        x: -9, w: 10, h: 8, d: 8,
+        color: 0x78350f, title: 'CÀ PHÊ PHỐ CỔ',
+        facadeTex: this.textures.cafeFacade
+      },
+      {
+        x: 1, w: 8, h: 7.5, d: 8,
+        color: 0x059669, title: 'HIỆU THUỐC 24/7',
+        facadeTex: this.textures.pharmacyFacade
+      },
+      {
+        x: 10, w: 8, h: 7, d: 8,
+        color: 0xd97706, title: 'TIỆM BÁNH MÌ',
+        facadeTex: this.textures.bakeryFacade
+      },
+      {
+        x: 21, w: 12, h: 12, d: 8,
+        color: 0x0284c7, title: 'TÒA NHÀ THƯƠNG MẠI',
+        facadeTex: null
+      }
+    ];
+
+    specs.forEach(s => {
+      const bMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(s.w, s.h, s.d),
+        new THREE.MeshStandardMaterial({ color: s.color, roughness: 0.7 })
+      );
+      bMesh.position.set(s.x, s.h / 2, bZ);
+      bMesh.receiveShadow = true;
+      buildingsGroup.add(bMesh);
+
+      // Storefront / Facade Texture on Front Wall
+      if (s.facadeTex) {
+        const facadePlane = new THREE.Mesh(
+          new THREE.PlaneGeometry(s.w - 0.4, 5.5),
+          new THREE.MeshBasicMaterial({ map: s.facadeTex })
+        );
+        facadePlane.position.set(s.x, 3.2, bZ - s.d / 2 - 0.05);
+        facadePlane.rotation.y = Math.PI;
+        buildingsGroup.add(facadePlane);
+      } else {
+        // Upper floor illuminated warm windows
+        for (let wy = 3.5; wy < s.h - 1.5; wy += 2.4) {
+          for (let wx = -s.w / 2 + 1.8; wx <= s.w / 2 - 1.8; wx += 2.4) {
+            const win = new THREE.Mesh(
+              new THREE.PlaneGeometry(1.2, 1.4),
+              new THREE.MeshBasicMaterial({ color: (Math.random() > 0.3) ? 0xfef08a : 0x1e293b })
+            );
+            win.position.set(s.x + wx, wy, bZ - s.d / 2 - 0.05);
+            win.rotation.y = Math.PI;
+            buildingsGroup.add(win);
+          }
+        }
+      }
+
+      // Roof Overhang Rim
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(s.w + 0.6, 0.4, s.d + 0.6), roofMat);
+      roof.position.set(s.x, s.h + 0.2, bZ);
+      buildingsGroup.add(roof);
+    });
+
+    this.streetGroup.add(buildingsGroup);
+  }
+
+  // Initialize Animated Street Traffic (Xe cộ qua lại trên đường)
+  initStreetTraffic(roadZ) {
+    this.trafficCars = [];
+
+    // Helper to build low-poly vehicle model
+    const createCarModel = (bodyColor, isTaxi = false, isVan = false) => {
+      const car = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.3, metalness: 0.3 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, opacity: 0.7, transparent: true });
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.7 });
+      const lightMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+      const carLen = isVan ? 5.2 : 4.4;
+      const carWid = isVan ? 2.1 : 1.9;
+      const carHgt = isVan ? 2.4 : 1.4;
+
+      // Lower Chassis
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(carLen, 0.6, carWid), bodyMat);
+      chassis.position.y = 0.55;
+      chassis.castShadow = true;
+      car.add(chassis);
+
+      // Cabin / Greenhouse
+      const cabinLen = isVan ? 3.8 : 2.5;
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinLen, carHgt * 0.6, carWid * 0.9), glassMat);
+      cabin.position.set(isVan ? -0.4 : -0.2, 0.85 + (carHgt * 0.3), 0);
+      car.add(cabin);
+
+      // Cabin Roof
+      const cRoof = new THREE.Mesh(new THREE.BoxGeometry(cabinLen + 0.1, 0.08, carWid * 0.92), bodyMat);
+      cRoof.position.set(isVan ? -0.4 : -0.2, 0.85 + (carHgt * 0.6), 0);
+      car.add(cRoof);
+
+      // Taxi Roof Sign
+      if (isTaxi) {
+        const sign = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.22, 0.35), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+        sign.position.set(-0.2, 0.85 + (carHgt * 0.6) + 0.15, 0);
+        car.add(sign);
+      }
+
+      // Headlights
+      [-carWid / 2 + 0.3, carWid / 2 - 0.3].forEach(lz => {
+        const hLight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.28), lightMat);
+        hLight.position.set(carLen / 2 + 0.02, 0.55, lz);
+        car.add(hLight);
+      });
+
+      // 4 Wheels
+      const wheels = [];
+      const wxOffsets = [-carLen * 0.3, carLen * 0.3];
+      const wzOffsets = [-carWid / 2 - 0.05, carWid / 2 + 0.05];
+
+      wxOffsets.forEach(wx => {
+        wzOffsets.forEach(wz => {
+          const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.18, 12), wheelMat);
+          wheel.rotation.x = Math.PI / 2;
+          wheel.position.set(wx, 0.32, wz);
+          wheel.castShadow = true;
+          car.add(wheel);
+          wheels.push(wheel);
+        });
+      });
+
+      return { mesh: car, wheels };
+    };
+
+    // 1. Yellow City Taxi traveling Right (speed +8.5 m/s, Z = roadZ - 3.5)
+    const taxi = createCarModel(0xfacc15, true, false);
+    taxi.mesh.position.set(-18, 0, roadZ - 3.5);
+    this.trafficCars.push({
+      ...taxi,
+      speed: 8.5,
+      direction: 1, // moving +X
+      minX: -42,
+      maxX: 42
+    });
+    this.streetGroup.add(taxi.mesh);
+
+    // 2. Blue Delivery Van traveling Left (speed -6.5 m/s, Z = roadZ + 3.5)
+    const van = createCarModel(0x0284c7, false, true);
+    van.mesh.position.set(20, 0, roadZ + 3.5);
+    van.mesh.rotation.y = Math.PI; // facing -X
+    this.trafficCars.push({
+      ...van,
+      speed: -6.5,
+      direction: -1, // moving -X
+      minX: -42,
+      maxX: 42
+    });
+    this.streetGroup.add(van.mesh);
+
+    // 3. Red Compact Sedan traveling Right (speed +10.0 m/s, Z = roadZ - 1.5)
+    const sedan = createCarModel(0xef4444, false, false);
+    sedan.mesh.position.set(2, 0, roadZ - 1.5);
+    this.trafficCars.push({
+      ...sedan,
+      speed: 10.0,
+      direction: 1,
+      minX: -42,
+      maxX: 42
+    });
+    this.streetGroup.add(sedan.mesh);
+  }
+
+  // Initialize Sidewalk Pedestrians (Người đi bộ dạo phố)
+  initSidewalkPedestrians(sidewalkZ) {
+    this.pedestrians = [];
+    const pedConfigs = [
+      { startX: -16, speed: 1.8, dir: 1, color: 0xec4899 },
+      { startX: 12, speed: -1.5, dir: -1, color: 0x10b981 },
+      { startX: -4, speed: 1.6, dir: 1, color: 0xa855f7 }
+    ];
+
+    pedConfigs.forEach(cfg => {
+      const pMesh = this.createHumanoidMesh({
+        clothesColor: cfg.color,
+        hairColor: 0x27272a,
+        prop: null
+      });
+      pMesh.position.set(cfg.startX, 0, sidewalkZ + (Math.random() - 0.5) * 1.5);
+      this.streetGroup.add(pMesh);
+
+      this.pedestrians.push({
+        mesh: pMesh,
+        speed: cfg.speed,
+        dir: cfg.dir,
+        minX: -26,
+        maxX: 26,
+        walkPhase: Math.random() * Math.PI
+      });
+    });
   }
 
   // 3D SHELVES & DYNAMIC PRODUCT MODELS
@@ -1445,7 +2515,7 @@ class Shop3D {
     }
   }
 
-  // FIRST-PERSON PLAYER MOVEMENT & COLLISION
+  // FIRST-PERSON PLAYER MOVEMENT & COLLISION (Seamless Indoor & Outdoor Walk)
   updatePlayerMovement(dt) {
     if (this.viewMode !== 'fps') return;
 
@@ -1465,19 +2535,73 @@ class Shop3D {
     if (p.keys.d) moveVector.sub(rightDir);
     if (p.keys.a) moveVector.add(rightDir);
 
+    // Speed boost timer from energy drink
+    if (p.speedBoostTimer > 0) {
+      p.speedBoostTimer -= dt;
+      if (p.speedBoostTimer <= 0) {
+        p.speedBoostTimer = 0;
+        this.game.log('⚡ Hiệu ứng Nước tăng lực đã hết.');
+      }
+    }
+
     if (moveVector.lengthSq() > 0.001) {
       moveVector.normalize();
-      const speed = p.keys.shift ? p.speed * 1.5 : p.speed;
-      p.pos.addScaledVector(moveVector, speed * dt);
+      let speed = p.keys.shift ? p.speed * 1.5 : p.speed;
+      if (p.speedBoostTimer > 0) speed *= 1.4;
 
-      // Store Boundaries Collision
-      const minX = -this.storeWidth / 2 + 1.2;
-      const maxX = this.storeWidth / 2 - 1.2;
-      const minZ = -this.storeDepth / 2 + 1.2;
-      const maxZ = this.storeDepth / 2 - 1.2;
+      const deltaMove = moveVector.clone().multiplyScalar(speed * dt);
+      const targetX = p.pos.x + deltaMove.x;
+      const targetZ = p.pos.z + deltaMove.z;
 
-      p.pos.x = Math.max(minX, Math.min(maxX, p.pos.x));
-      p.pos.z = Math.max(minZ, Math.min(maxZ, p.pos.z));
+      // Door opening corridor
+      const doorMinX = -9.6;
+      const doorMaxX = -6.4;
+      const wallZ = this.storeDepth / 2; // 9.0
+
+      // 1. Z-axis transition logic:
+      let newZ = targetZ;
+      if (p.pos.z <= wallZ) {
+        // Player currently inside store
+        if (targetZ > wallZ) {
+          // Attempting to step outside: allowed ONLY if in doorway
+          if (p.pos.x >= doorMinX && p.pos.x <= doorMaxX) {
+            newZ = Math.min(23.5, targetZ); // Walk out onto sidewalk & street!
+          } else {
+            newZ = Math.min(wallZ - 0.2, targetZ); // Blocked by front glass wall
+          }
+        } else {
+          // Inside back wall collision
+          newZ = Math.max(-this.storeDepth / 2 + 1.2, targetZ);
+        }
+      } else {
+        // Player currently outside on sidewalk / street
+        if (targetZ < wallZ) {
+          // Attempting to re-enter store: allowed ONLY if in doorway
+          if (p.pos.x >= doorMinX && p.pos.x <= doorMaxX) {
+            newZ = targetZ; // Walk back inside store!
+          } else {
+            newZ = Math.max(wallZ + 0.2, targetZ); // Blocked by storefront glass
+          }
+        } else {
+          // Max outdoor street depth
+          newZ = Math.min(23.5, targetZ);
+        }
+      }
+
+      // 2. X-axis bounds logic:
+      let newX = targetX;
+      if (newZ <= wallZ) {
+        // Inside store width boundaries
+        const minX = -this.storeWidth / 2 + 1.2; // -10.8
+        const maxX = this.storeWidth / 2 - 1.2;  // 10.8
+        newX = Math.max(minX, Math.min(maxX, targetX));
+      } else {
+        // Outside sidewalk & street width
+        newX = Math.max(-28.0, Math.min(28.0, targetX));
+      }
+
+      p.pos.x = newX;
+      p.pos.z = newZ;
     }
 
     // Update FPS Camera position and rotation
@@ -1497,7 +2621,7 @@ class Shop3D {
     const promptEl = document.getElementById('fps-interact-prompt');
     const promptText = document.getElementById('fps-prompt-text');
 
-    if (intersects.length > 0 && intersects[0].distance < 3.8) {
+    if (intersects.length > 0 && intersects[0].distance < 4.2) {
       const hit = intersects[0].object;
       const data = hit.userData;
       this.player.targetedObject = data;
@@ -1514,6 +2638,16 @@ class Shop3D {
           promptText.innerText = 'Tính tiền cho khách 🔔';
         } else if (data.type === 'customer') {
           promptText.innerText = 'Khám xét nghi phạm 🔍 / Chặn hỏi [E]';
+        } else if (data.type === 'vending_machine') {
+          promptText.innerText = 'Máy bán nước: Uống nước tăng lực [E] ⚡';
+        } else if (data.type === 'sidewalk_sign') {
+          promptText.innerText = 'Bảng hiệu: Vẫy gọi khách vào tiệm [E] 📢';
+        } else if (data.type === 'bench') {
+          promptText.innerText = 'Ngồi nghỉ ngơi ngắm phố [E] ☕';
+        } else if (data.type === 'delivery_pallet') {
+          promptText.innerText = 'Kiện hàng giao tới: Xếp nhanh lên kệ [E] 📦';
+        } else if (data.type === 'outdoor_trash') {
+          promptText.innerText = 'Dọn rác trước tiệm [E] 🧹';
         }
       }
     } else {
@@ -1550,6 +2684,39 @@ class Shop3D {
       if (targetData.customerObj) {
         this.game.interactWithCustomer(targetData.customerObj);
       }
+    } else if (targetData.type === 'vending_machine') {
+      if (window.gameAudio) gameAudio.playChaChing();
+      this.player.speedBoostTimer = 45; // 45s of speed boost
+      const extraMoney = 15000;
+      this.game.money += extraMoney;
+      this.game.todayRevenue += extraMoney;
+      this.game.allTimeRevenue += extraMoney;
+      this.game.addFloatingText('⚡ UỐNG BÒ HÚC: +CHẠY NHANH & +15.000₫!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#fbbf24');
+      this.game.log('⚡ Bạn đã mua lon Nước Tăng Lực từ máy bán nước ngoài phố! Tốc độ di chuyển tăng 40% trong 45s và máy thu về +15.000₫!');
+      this.game.updateStatsUI();
+    } else if (targetData.type === 'sidewalk_sign') {
+      if (window.gameAudio) gameAudio.playClick();
+      this.game.reputation = Math.min(100, this.game.reputation + 2);
+      if (this.game.isOpen) {
+        this.game.spawnCustomer();
+        this.game.spawnCustomer();
+      }
+      this.game.addFloatingText('📢 VẪY KHÁCH: +2 UY TÍN & KHÁCH VÀO TIỆM!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#38bdf8');
+      this.game.log('📢 Bạn đứng vẫy tay và phát tờ rơi cạnh bảng hiệu vỉa hè! Khách đi đường bị thu hút tấp nập kéo vào tiệm!');
+      this.game.updateStatsUI();
+    } else if (targetData.type === 'bench') {
+      if (window.gameAudio) gameAudio.playClick();
+      this.game.addFloatingText('☕ Thư giãn ngắm phố...', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#a7f3d0');
+      this.game.log('🌿 Bạn ngồi nghỉ ngơi trên băng ghế ngoài vỉa hè, hít thở không khí phố xá thoáng mát.');
+    } else if (targetData.type === 'delivery_pallet') {
+      this.game.quickRestockAll();
+      this.game.log('📦 Bạn kiểm tra kiện hàng vừa giao tới ngoài vỉa hè và chuyển nhanh hàng vào kệ!');
+    } else if (targetData.type === 'outdoor_trash') {
+      if (window.gameAudio) gameAudio.playSweep();
+      this.game.cleanliness = Math.min(100, this.game.cleanliness + 8);
+      this.game.addFloatingText('🧹 Vỉa hè sạch bong!', (this.game.canvas ? this.game.canvas.width : 600) * 0.5, 180, '#34d399');
+      this.game.log('🧹 Bạn đã thu dọn rác trước cửa tiệm, vỉa hè sạch sẽ thu hút người đi bộ!');
+      this.game.updateStatsUI();
     }
   }
 
@@ -1704,11 +2871,18 @@ class Shop3D {
   }
 
   // HUD OVERLAYS & CAMERA BUTTONS
+  // HUD OVERLAYS & CAMERA BUTTONS
   setupHUDOverlays() {
     const toolbar = document.createElement('div');
     toolbar.className = 'camera-toolbar-3d';
     toolbar.innerHTML = `
       <div class="cam-badge" id="camera-mode-badge">🎥 GÓC NHÌN QUẢN LÝ 3D</div>
+      <button id="btn-view-indoor" class="cam-btn-secondary" title="Xem bên trong cửa hàng">
+        🏠 Trong tiệm
+      </button>
+      <button id="btn-view-outdoor" class="cam-btn-secondary" title="Xem phố xá bên ngoài">
+        🌳 Ngoài phố
+      </button>
       <button id="btn-toggle-camera-mode" class="cam-btn" title="Chuyển đổi giữa góc nhìn Quản lý 3D và Góc nhìn thứ nhất (Phím V)">
         🔄 Đổi góc nhìn [Phím V]
       </button>
@@ -1736,8 +2910,26 @@ class Shop3D {
     const hint = document.createElement('div');
     hint.id = 'view-mode-hint';
     hint.className = 'view-mode-hint';
-    hint.innerHTML = `🖱️ <b>Chuột trái:</b> Xoay tiệm | <b>Chuột phải:</b> Di chuyển | <b>Cuộn chuột:</b> Thu phóng | <b>[V]:</b> Góc nhìn thứ nhất`;
+    hint.innerHTML = `🖱️ <b>Chuột trái:</b> Xoay tiệm | <b>Chuột phải:</b> Di chuyển ra ngoài phố | <b>Cuộn chuột:</b> Thu phóng | <b>[V]:</b> Góc nhìn thứ nhất`;
     this.container.appendChild(hint);
+
+    document.getElementById('btn-view-indoor').onclick = () => {
+      if (this.viewMode === 'fps') this.toggleViewMode('iso');
+      if (this.controls) {
+        this.isoCamera.position.set(0, 18, 19);
+        this.controls.target.set(0, 1.2, 0);
+        this.controls.update();
+      }
+    };
+
+    document.getElementById('btn-view-outdoor').onclick = () => {
+      if (this.viewMode === 'fps') this.toggleViewMode('iso');
+      if (this.controls) {
+        this.isoCamera.position.set(-2, 14, 26);
+        this.controls.target.set(-2, 1.0, 13);
+        this.controls.update();
+      }
+    };
 
     document.getElementById('btn-toggle-camera-mode').onclick = () => this.toggleViewMode();
     document.getElementById('btn-reset-camera').onclick = () => {
@@ -1766,6 +2958,90 @@ class Shop3D {
     this.renderer.setSize(w, h);
   }
 
+  // Automatic Sliding Glass Doors Animation
+  updateSlidingDoors(dt) {
+    if (!this.slidingDoors) return;
+
+    // Check if player or any customer is near the entrance door (X: -8.0, Z: 9.0)
+    let someoneNearDoor = false;
+    if (this.viewMode === 'fps') {
+      const pDist = Math.hypot(this.player.pos.x - (-8.0), this.player.pos.z - 9.0);
+      if (pDist < 4.5) someoneNearDoor = true;
+    }
+    if (!someoneNearDoor && this.game.customers) {
+      for (let c of this.game.customers) {
+        const m = this.customerMeshes.get(c);
+        if (m) {
+          const cDist = Math.hypot(m.position.x - (-8.0), m.position.z - 9.0);
+          if (cDist < 3.8) {
+            someoneNearDoor = true;
+            break;
+          }
+        }
+      }
+    }
+
+    this.slidingDoors.targetOpen = someoneNearDoor ? 1.0 : 0.0;
+    const diff = this.slidingDoors.targetOpen - this.slidingDoors.currentOpen;
+    this.slidingDoors.currentOpen += diff * Math.min(1.0, dt * 6.5);
+
+    const sd = this.slidingDoors;
+    sd.left.position.x = sd.leftClosedX + (sd.leftOpenX - sd.leftClosedX) * sd.currentOpen;
+    sd.right.position.x = sd.rightClosedX + (sd.rightOpenX - sd.rightClosedX) * sd.currentOpen;
+  }
+
+  // Animated Traffic Cars along Road
+  updateStreetTraffic(dt) {
+    if (!this.trafficCars || this.trafficCars.length === 0) return;
+
+    this.trafficCars.forEach(car => {
+      car.mesh.position.x += car.speed * dt;
+
+      // Rotate wheels with movement speed
+      if (car.wheels) {
+        car.wheels.forEach(w => {
+          w.rotation.x += car.speed * dt * 3.5;
+        });
+      }
+
+      // Wrap around road boundaries
+      if (car.direction > 0 && car.mesh.position.x > car.maxX) {
+        car.mesh.position.x = car.minX;
+      } else if (car.direction < 0 && car.mesh.position.x < car.minX) {
+        car.mesh.position.x = car.maxX;
+      }
+    });
+  }
+
+  // Animated Sidewalk Pedestrians
+  updateSidewalkPedestrians(dt) {
+    if (!this.pedestrians || this.pedestrians.length === 0) return;
+
+    this.pedestrians.forEach(ped => {
+      ped.mesh.position.x += ped.speed * dt;
+      ped.walkPhase += dt * 7.5;
+
+      // Leg & Arm swinging
+      if (ped.mesh.userData && ped.mesh.userData.leftLegPivot) {
+        ped.mesh.userData.leftLegPivot.rotation.x = Math.sin(ped.walkPhase) * 0.45;
+        ped.mesh.userData.rightLegPivot.rotation.x = -Math.sin(ped.walkPhase) * 0.45;
+        ped.mesh.userData.leftArmPivot.rotation.x = -Math.sin(ped.walkPhase) * 0.45;
+        ped.mesh.userData.rightArmPivot.rotation.x = Math.sin(ped.walkPhase) * 0.45;
+        ped.mesh.position.y = Math.abs(Math.sin(ped.walkPhase * 2)) * 0.05;
+      }
+
+      // Face direction of walking
+      ped.mesh.rotation.y = ped.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+
+      // Wrap around boundaries
+      if (ped.dir > 0 && ped.mesh.position.x > ped.maxX) {
+        ped.mesh.position.x = ped.minX;
+      } else if (ped.dir < 0 && ped.mesh.position.x < ped.minX) {
+        ped.mesh.position.x = ped.maxX;
+      }
+    });
+  }
+
   // MAIN RENDER LOOP (Called every frame from game.loop)
   update(dt) {
     if (this.viewMode === 'iso' && this.controls) {
@@ -1774,6 +3050,9 @@ class Shop3D {
       this.updatePlayerMovement(dt);
     }
 
+    this.updateSlidingDoors(dt);
+    this.updateStreetTraffic(dt);
+    this.updateSidewalkPedestrians(dt);
     this.syncSimulationEntities(dt);
   }
 
