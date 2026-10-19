@@ -4317,6 +4317,7 @@ class Shop3D {
       const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, opacity: 0.7, transparent: true });
       const wheelMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.7 });
       const lightMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+      const steelMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.25 });
 
       const carLen = isBus ? 7.6 : (isVan ? 5.2 : (isSportscar ? 4.6 : 4.4));
       const carWid = isBus ? 2.4 : (isVan ? 2.1 : 1.9);
