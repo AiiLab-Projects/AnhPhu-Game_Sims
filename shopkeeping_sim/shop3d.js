@@ -53,6 +53,7 @@ class Shop3D {
     this.slidingDoors = null;
     this.trafficCars = [];
     this.pedestrians = [];
+    this.cameraTransition = null;
 
     this.init();
   }
@@ -2871,16 +2872,15 @@ class Shop3D {
   }
 
   // HUD OVERLAYS & CAMERA BUTTONS
-  // HUD OVERLAYS & CAMERA BUTTONS
   setupHUDOverlays() {
     const toolbar = document.createElement('div');
     toolbar.className = 'camera-toolbar-3d';
     toolbar.innerHTML = `
       <div class="cam-badge" id="camera-mode-badge">🎥 GÓC NHÌN QUẢN LÝ 3D</div>
-      <button id="btn-view-indoor" class="cam-btn-secondary" title="Xem bên trong cửa hàng">
+      <button id="btn-view-indoor" class="cam-btn-view cam-btn-indoor active" title="Xem nhanh toàn cảnh bên trong cửa hàng">
         🏠 Trong tiệm
       </button>
-      <button id="btn-view-outdoor" class="cam-btn-secondary" title="Xem phố xá bên ngoài">
+      <button id="btn-view-outdoor" class="cam-btn-view cam-btn-outdoor" title="Xem nhanh toàn cảnh phố xá bên ngoài">
         🌳 Ngoài phố
       </button>
       <button id="btn-toggle-camera-mode" class="cam-btn" title="Chuyển đổi giữa góc nhìn Quản lý 3D và Góc nhìn thứ nhất (Phím V)">
@@ -2913,35 +2913,64 @@ class Shop3D {
     hint.innerHTML = `🖱️ <b>Chuột trái:</b> Xoay tiệm | <b>Chuột phải:</b> Di chuyển ra ngoài phố | <b>Cuộn chuột:</b> Thu phóng | <b>[V]:</b> Góc nhìn thứ nhất`;
     this.container.appendChild(hint);
 
+    // Click: Smooth glide to indoor store view
     document.getElementById('btn-view-indoor').onclick = () => {
-      if (this.viewMode === 'fps') this.toggleViewMode('iso');
-      if (this.controls) {
-        this.isoCamera.position.set(0, 18, 19);
-        this.controls.target.set(0, 1.2, 0);
-        this.controls.update();
-      }
+      this.transitionToView(
+        new THREE.Vector3(0, 18, 19),
+        new THREE.Vector3(0, 1.2, 0),
+        'btn-view-indoor',
+        '🎥 Đang xem toàn cảnh Trong Tiệm!'
+      );
     };
 
+    // Click: Smooth glide to outdoor street view
     document.getElementById('btn-view-outdoor').onclick = () => {
-      if (this.viewMode === 'fps') this.toggleViewMode('iso');
-      if (this.controls) {
-        this.isoCamera.position.set(-2, 14, 26);
-        this.controls.target.set(-2, 1.0, 13);
-        this.controls.update();
-      }
+      this.transitionToView(
+        new THREE.Vector3(-2, 14, 27),
+        new THREE.Vector3(-2, 1.0, 13),
+        'btn-view-outdoor',
+        '🎥 Đang xem toàn cảnh Phố Xá Bên Ngoài!'
+      );
     };
 
     document.getElementById('btn-toggle-camera-mode').onclick = () => this.toggleViewMode();
     document.getElementById('btn-reset-camera').onclick = () => {
-      if (this.controls) {
-        this.isoCamera.position.set(0, 18, 19);
-        this.controls.target.set(0, 1.2, 0);
-        this.controls.update();
-      }
+      this.transitionToView(
+        new THREE.Vector3(0, 18, 19),
+        new THREE.Vector3(0, 1.2, 0),
+        'btn-view-indoor',
+        '📍 Đã căn giữa camera.'
+      );
       this.player.pos.set(0, 1.65, 5.5);
       this.player.yaw = 0;
       this.player.pitch = -0.05;
     };
+  }
+
+  // Smooth Camera Glide Transition between Indoor & Outdoor Views
+  transitionToView(targetCamPos, targetLookAt, activeBtnId, logMsg) {
+    if (this.viewMode === 'fps') {
+      this.toggleViewMode('iso');
+    }
+
+    document.querySelectorAll('.cam-btn-view').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.getElementById(activeBtnId);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    if (this.controls) {
+      this.cameraTransition = {
+        isTransitioning: true,
+        startPos: this.isoCamera.position.clone(),
+        targetPos: targetCamPos.clone(),
+        startLookAt: this.controls.target.clone(),
+        targetLookAt: targetLookAt.clone(),
+        progress: 0,
+        duration: 0.65
+      };
+    }
+    if (logMsg && this.game && this.game.log) {
+      this.game.log(logMsg);
+    }
   }
 
   onWindowResize() {
@@ -3044,7 +3073,23 @@ class Shop3D {
 
   // MAIN RENDER LOOP (Called every frame from game.loop)
   update(dt) {
-    if (this.viewMode === 'iso' && this.controls) {
+    if (this.cameraTransition && this.cameraTransition.isTransitioning) {
+      const ct = this.cameraTransition;
+      ct.progress += dt / ct.duration;
+      const t = Math.min(1.0, ct.progress);
+      // Smooth cubic ease out curve
+      const ease = 1 - Math.pow(1 - t, 3);
+
+      this.isoCamera.position.lerpVectors(ct.startPos, ct.targetPos, ease);
+      if (this.controls) {
+        this.controls.target.lerpVectors(ct.startLookAt, ct.targetLookAt, ease);
+        this.controls.update();
+      }
+
+      if (t >= 1.0) {
+        ct.isTransitioning = false;
+      }
+    } else if (this.viewMode === 'iso' && this.controls) {
       this.controls.update();
     } else if (this.viewMode === 'fps') {
       this.updatePlayerMovement(dt);

@@ -1562,13 +1562,13 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(8px);
-  padding: 6px 12px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  padding: 6px 14px;
   border-radius: 30px;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  z-index: 40;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.2);
+  z-index: 60;
 }
 
 .cam-badge {
@@ -1576,9 +1576,50 @@ body {
   font-weight: 800;
   color: #38bdf8;
   letter-spacing: 0.5px;
-  padding: 3px 8px;
+  padding: 4px 10px;
   background: rgba(56, 189, 248, 0.15);
   border-radius: 20px;
+}
+
+/* Distinctive View Switch Buttons */
+.cam-btn-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 7px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.cam-btn-indoor {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+.cam-btn-indoor:hover, .cam-btn-indoor.active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  border-color: #fbbf24;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.55);
+}
+
+.cam-btn-outdoor {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.45);
+}
+.cam-btn-outdoor:hover, .cam-btn-outdoor.active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border-color: #34d399;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.55);
 }
 
 .cam-btn {
@@ -1587,7 +1628,7 @@ body {
   border: none;
   font-size: 0.8rem;
   font-weight: 700;
-  padding: 6px 14px;
+  padding: 7px 14px;
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1602,17 +1643,18 @@ body {
 .cam-btn-secondary {
   background: rgba(255, 255, 255, 0.08);
   color: #94a3b8;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   font-size: 0.8rem;
   font-weight: 600;
-  padding: 6px 10px;
+  padding: 7px 12px;
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s;
 }
 .cam-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
+  transform: translateY(-1px);
 }
 
 /* FPS Crosshair */
