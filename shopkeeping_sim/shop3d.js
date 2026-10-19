@@ -37,7 +37,7 @@ class Shop3D {
       pitch: -0.05, // vertical look (radians)
       speed: 6.5,
       radius: 0.5,
-      keys: { w: false, a: false, s: false, d: false, shift: false },
+      keys: { w: false, a: false, s: false, d: false, arrowUp: false, arrowDown: false, arrowLeft: false, arrowRight: false, q: false, shift: false },
       isLocked: false,
       isMouseDown: false,
       lastMouseX: 0,
@@ -2531,10 +2531,13 @@ class Shop3D {
     const rightDir = new THREE.Vector3().crossVectors(forwardDir, new THREE.Vector3(0, 1, 0)).normalize();
 
     const moveVector = new THREE.Vector3();
-    if (p.keys.w) moveVector.add(forwardDir);
-    if (p.keys.s) moveVector.sub(forwardDir);
-    if (p.keys.d) moveVector.sub(rightDir);
-    if (p.keys.a) moveVector.add(rightDir);
+    if (p.keys.w || p.keys.arrowUp) moveVector.add(forwardDir);
+    if (p.keys.s || p.keys.arrowDown) moveVector.sub(forwardDir);
+    if (p.keys.d || p.keys.arrowRight) moveVector.sub(rightDir);
+    if (p.keys.a || p.keys.arrowLeft) moveVector.add(rightDir);
+
+    // Keyboard rotation helper with Q
+    if (p.keys.q) p.yaw += 2.2 * dt;
 
     // Speed boost timer from energy drink
     if (p.speedBoostTimer > 0) {
@@ -2746,33 +2749,72 @@ class Shop3D {
     });
   }
 
-  // CONTROLS & EVENT BINDINGS
+  // CONTROLS & EVENT BINDINGS (Arrow Keys [↑ ↓ ← →] & WASD Support)
   setupControlsAndInput() {
     window.addEventListener('keydown', (e) => {
+      // Don't capture keys if typing in modal input/textarea
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+
       const k = e.key.toLowerCase();
-      if (k === 'w') this.player.keys.w = true;
-      if (k === 'a') this.player.keys.a = true;
-      if (k === 's') this.player.keys.s = true;
-      if (k === 'd') this.player.keys.d = true;
+
+      // Arrow Keys & WASD mapping
+      if (k === 'w' || e.key === 'ArrowUp') {
+        this.player.keys.w = true;
+        this.player.keys.arrowUp = true;
+        if (e.key === 'ArrowUp') e.preventDefault();
+      }
+      if (k === 's' || e.key === 'ArrowDown') {
+        this.player.keys.s = true;
+        this.player.keys.arrowDown = true;
+        if (e.key === 'ArrowDown') e.preventDefault();
+      }
+      if (k === 'a' || e.key === 'ArrowLeft') {
+        this.player.keys.a = true;
+        this.player.keys.arrowLeft = true;
+        if (e.key === 'ArrowLeft') e.preventDefault();
+      }
+      if (k === 'd' || e.key === 'ArrowRight') {
+        this.player.keys.d = true;
+        this.player.keys.arrowRight = true;
+        if (e.key === 'ArrowRight') e.preventDefault();
+      }
+      if (k === 'q') this.player.keys.q = true;
       if (e.key === 'Shift') this.player.keys.shift = true;
 
       if (k === 'v') {
         this.toggleViewMode();
       }
 
-      if (k === 'e' && this.viewMode === 'fps') {
+      // Interaction with [E], [Space], or [Enter]
+      if ((k === 'e' || e.code === 'Space' || e.key === 'Enter') && this.viewMode === 'fps') {
         if (this.player.targetedObject) {
+          e.preventDefault();
           this.triggerInteraction(this.player.targetedObject);
         }
       }
     });
 
     window.addEventListener('keyup', (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+
       const k = e.key.toLowerCase();
-      if (k === 'w') this.player.keys.w = false;
-      if (k === 'a') this.player.keys.a = false;
-      if (k === 's') this.player.keys.s = false;
-      if (k === 'd') this.player.keys.d = false;
+      if (k === 'w' || e.key === 'ArrowUp') {
+        this.player.keys.w = false;
+        this.player.keys.arrowUp = false;
+      }
+      if (k === 's' || e.key === 'ArrowDown') {
+        this.player.keys.s = false;
+        this.player.keys.arrowDown = false;
+      }
+      if (k === 'a' || e.key === 'ArrowLeft') {
+        this.player.keys.a = false;
+        this.player.keys.arrowLeft = false;
+      }
+      if (k === 'd' || e.key === 'ArrowRight') {
+        this.player.keys.d = false;
+        this.player.keys.arrowRight = false;
+      }
+      if (k === 'q') this.player.keys.q = false;
       if (e.key === 'Shift') this.player.keys.shift = false;
     });
 
@@ -2855,8 +2897,8 @@ class Shop3D {
       if (this.controls) this.controls.enabled = false;
       if (crosshair) crosshair.classList.remove('hidden');
       if (modeBadge) modeBadge.innerText = '🚶 GÓC NHÌN THỨ NHẤT (FPS)';
-      if (hintEl) hintEl.innerHTML = '⌨️ <b>W,A,S,D:</b> Đi lại | <b>Chuột:</b> Xoay nhìn | <b>[E] / Click:</b> Tương tác | <b>[V]:</b> Đổi góc nhìn';
-      this.game.log('🎥 Đã chuyển sang Góc nhìn thứ nhất (WASD để đi lại trong tiệm)!');
+      if (hintEl) hintEl.innerHTML = '⌨️ <b>Mũi tên [↑ ↓ ← →] / WASD:</b> Đi lại | <b>[Space] / [Enter] / [E]:</b> Tương tác | <b>[V]:</b> Đổi góc nhìn';
+      this.game.log('🎥 Đã chuyển sang Góc nhìn thứ nhất (Phím Mũi Tên [↑ ↓ ← →] hoặc WASD để đi lại trong tiệm & ngoài phố)!');
     } else {
       if (document.exitPointerLock && document.pointerLockElement) {
         document.exitPointerLock();
@@ -2866,8 +2908,8 @@ class Shop3D {
       if (crosshair) crosshair.classList.add('hidden');
       if (promptEl) promptEl.classList.add('hidden');
       if (modeBadge) modeBadge.innerText = '🎥 GÓC NHÌN QUẢN LÝ 3D';
-      if (hintEl) hintEl.innerHTML = '🖱️ <b>Chuột trái:</b> Xoay tiệm | <b>Chuột phải:</b> Di chuyển | <b>Cuộn chuột:</b> Thu phóng | <b>[V]:</b> Góc nhìn thứ nhất';
-      this.game.log('🎥 Đã chuyển sang Góc nhìn Quản lý Toàn cảnh 3D!');
+      if (hintEl) hintEl.innerHTML = '⌨️ <b>Phím Mũi tên [↑ ↓ ← →]:</b> Lướt xem toàn cảnh | <b>Chuột:</b> Xoay & Thu phóng | <b>[V]:</b> Góc nhìn thứ nhất';
+      this.game.log('🎥 Đã chuyển sang Góc nhìn Quản lý Toàn cảnh 3D (Phím Mũi Tên để lướt xem quán)!');
     }
   }
 
@@ -2902,7 +2944,7 @@ class Shop3D {
     prompt.id = 'fps-interact-prompt';
     prompt.className = 'fps-interact-prompt hidden';
     prompt.innerHTML = `
-      <span class="key-badge">E</span>
+      <span class="key-badge">Space / E</span>
       <span id="fps-prompt-text">Tương tác</span>
     `;
     this.container.appendChild(prompt);
@@ -2910,7 +2952,7 @@ class Shop3D {
     const hint = document.createElement('div');
     hint.id = 'view-mode-hint';
     hint.className = 'view-mode-hint';
-    hint.innerHTML = `🖱️ <b>Chuột trái:</b> Xoay tiệm | <b>Chuột phải:</b> Di chuyển ra ngoài phố | <b>Cuộn chuột:</b> Thu phóng | <b>[V]:</b> Góc nhìn thứ nhất`;
+    hint.innerHTML = `⌨️ <b>Phím Mũi tên [↑ ↓ ← →] / WASD:</b> Di chuyển | <b>[Space] / [Enter] / [E]:</b> Tương tác | <b>[V]:</b> Đổi góc nhìn`;
     this.container.appendChild(hint);
 
     // Click: Smooth glide to indoor store view
@@ -3090,6 +3132,7 @@ class Shop3D {
         ct.isTransitioning = false;
       }
     } else if (this.viewMode === 'iso' && this.controls) {
+      this.updateIsoPan(dt);
       this.controls.update();
     } else if (this.viewMode === 'fps') {
       this.updatePlayerMovement(dt);
@@ -3099,6 +3142,24 @@ class Shop3D {
     this.updateStreetTraffic(dt);
     this.updateSidewalkPedestrians(dt);
     this.syncSimulationEntities(dt);
+  }
+
+  // Smoothly pan camera around store and street with Arrow Keys in Isometric View
+  updateIsoPan(dt) {
+    if (!this.controls) return;
+    const p = this.player;
+    const panSpeed = 22.0 * dt;
+    const panVec = new THREE.Vector3();
+
+    if (p.keys.arrowUp || p.keys.w) panVec.z -= panSpeed;
+    if (p.keys.arrowDown || p.keys.s) panVec.z += panSpeed;
+    if (p.keys.arrowLeft || p.keys.a) panVec.x -= panSpeed;
+    if (p.keys.arrowRight || p.keys.d) panVec.x += panSpeed;
+
+    if (panVec.lengthSq() > 0) {
+      this.isoCamera.position.add(panVec);
+      this.controls.target.add(panVec);
+    }
   }
 
   render() {
